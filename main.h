@@ -19,9 +19,9 @@ extern "C" {
 #define PXTOCM					1570.0f //experimental value
 #define GOAL_DISTANCE 			40.0f
 #define MAX_DISTANCE 			25.0f
-#define ERROR_THRESHOLD			5.0f	//[mm] because of the noise of the camera
-#define KP						100.0f
-#define KI 						1.5f	//must not be zero
+#define ERROR_THRESHOLD			5.0f	//[mm] because of the noise of the camera/T
+#define KP						200.0f
+#define KI 						1.6f	//must not be zero
 #define MAX_SUM_ERROR 			(MOTOR_SPEED_LIMIT/KI)
 #define PERIMETER_EPUCK			13
 

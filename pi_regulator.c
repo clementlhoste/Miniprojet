@@ -9,21 +9,21 @@
 #include <motors.h>
 #include <pi_regulator.h>
 #include <process_image.h>
-#include "..\lib\e-puck2_main-processor\src\sensors\VL53L0X\VL53L0X.h"
+#include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
 
 //simple PI regulator implementation
 int16_t pi_regulator(float distance, float goal){
 
-	float error = 0;
-	float speed = 0;
+	uint16_t error = 0;
+	uint16_t speed = 0;
 
-	static float sum_error = 0;
+	static int sum_error = 0;
 
 	error = distance - goal;
 
 	//disables the PI regulator if the error is to small
 	//this avoids to always move as we cannot exactly be where we want and 
-	//the camera is a bit noisy
+	//the ToF is a bit noisy.
 	if(fabs(error) < ERROR_THRESHOLD){
 		return 0;
 	}
@@ -39,7 +39,7 @@ int16_t pi_regulator(float distance, float goal){
 
 	speed = KP * error + KI * sum_error;
 
-    return (int16_t)speed;
+    return speed;
 }
 
 static THD_WORKING_AREA(waPiRegulator, 256);
@@ -58,10 +58,10 @@ static THD_FUNCTION(PiRegulator, arg) {
         
         //computes the speed to give to the motors
         //distance_cm is modified by the image processing thread
-        float distance_mm;
+        uint16_t distance_mm;
         distance_mm = VL53L0X_get_dist_mm();
 
-        chprintf((BaseSequentialStream *)&SDU1, "Distance= %f\n", distance_mm);
+        chprintf((BaseSequentialStream *)&SDU1, "Distance= %d\n", distance_mm);
 
 
         speed = pi_regulator(distance_mm, GOAL_DISTANCE);
@@ -79,8 +79,8 @@ static THD_FUNCTION(PiRegulator, arg) {
 		right_motor_set_speed(speed - ROTATION_COEFF * speed_correction);
 		left_motor_set_speed(speed + ROTATION_COEFF * speed_correction);
 
-        //100Hz
-        chThdSleepUntilWindowed(time, time + MS2ST(10));
+        //10Hz soit 100ms d'attente
+        chThdSleepUntilWindowed(time, time + MS2ST(100));
     }
 }
 

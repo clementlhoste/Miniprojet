@@ -12,14 +12,14 @@
 #include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
 
 //simple PI regulator implementation
-int16_t pi_regulator(float distance, float goal){
+int16_t pi_regulator(uint16_t distance, uint16_t goal){
 
-	uint16_t error = 0;
-	uint16_t speed = 0;
+	int16_t error = 0;
+	int16_t speed = 0;
 
 	static int sum_error = 0;
 
-	error = distance - goal;
+	error = (int)distance - (int)goal;
 
 	//disables the PI regulator if the error is to small
 	//this avoids to always move as we cannot exactly be where we want and 
@@ -31,9 +31,9 @@ int16_t pi_regulator(float distance, float goal){
 	sum_error += error;
 
 	//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
-	if(sum_error > MAX_SUM_ERROR){
+	if(sum_error > MAX_SUM_ERROR/2){
 		sum_error = MAX_SUM_ERROR;
-	}else if(sum_error < -MAX_SUM_ERROR){
+	}else if(sum_error < -MAX_SUM_ERROR/2){
 		sum_error = -MAX_SUM_ERROR;
 	}
 
@@ -80,7 +80,7 @@ static THD_FUNCTION(PiRegulator, arg) {
 		left_motor_set_speed(speed + ROTATION_COEFF * speed_correction);
 
         //10Hz soit 100ms d'attente
-        chThdSleepUntilWindowed(time, time + MS2ST(100));
+        chThdSleepUntilWindowed(time, time + MS2ST(10));
     }
 }
 

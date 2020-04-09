@@ -61,19 +61,27 @@ static THD_FUNCTION(PiRegulator, arg) {
         float distance_mm;
         distance_mm = VL53L0X_get_dist_mm();
 
-        chprintf((BaseSequentialStream *)&SDU1, "Distance= %f\n", distance_mm);
+        //chprintf((BaseSequentialStream *)&SDU1, "Distance= %f\n", distance_mm);
 
 
-        speed = pi_regulator(distance_mm, GOAL_DISTANCE);
-        //speed = 300;
+        //speed = pi_regulator(distance_mm, GOAL_DISTANCE);
+        if(distance_mm <= GOAL_DISTANCE)
+        {
+        	speed = 0;
+        }
+        else
+        {
+        	speed = 500;
+        }
+
 
         //computes a correction factor to let the robot rotate to be in front of the line
-        //speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
+        speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
 
         //if the line is nearly in front of the camera, don't rotate
-       // if(abs(speed_correction) < ROTATION_THRESHOLD){
+        if(abs(speed_correction) < ROTATION_THRESHOLD || speed == 0){
         	speed_correction = 0;
-       // }
+        }
 
         //applies the speed from the PI regulator and the correction for the rotation
 		right_motor_set_speed(speed - ROTATION_COEFF * speed_correction);

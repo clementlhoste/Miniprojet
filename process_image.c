@@ -11,6 +11,7 @@
 
 static float distance_cm = 0;
 static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	//middle
+static uint16_t line_width = 0;
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
@@ -130,7 +131,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 	uint8_t *img_buff_ptr;
 	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
-	uint16_t lineWidth = 0;
+	//uint16_t lineWidth = 0;
 
 	bool send_to_computer = true;
 
@@ -148,11 +149,11 @@ static THD_FUNCTION(ProcessImage, arg) {
 		}
 
 		//search for a line in the image and gets its width in pixels
-		lineWidth = extract_line_width(image);
+		line_width = extract_line_width(image);
 
 		//converts the width into a distance between the robot and the camera
-		if(lineWidth){
-			distance_cm = PXTOCM/lineWidth;
+		if(line_width){
+			distance_cm = PXTOCM/line_width;
 		}
 
 		if(send_to_computer){
@@ -162,6 +163,10 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//invert the bool
 		send_to_computer = !send_to_computer;
     }
+}
+
+uint16_t get_line_width(void){
+	return line_width;
 }
 
 float get_distance_cm(void){

@@ -65,7 +65,7 @@ static THD_FUNCTION(PiRegulator, arg) {
         uint16_t distance_mm;
         distance_mm = VL53L0X_get_dist_mm();
 
-        chprintf((BaseSequentialStream *)&SDU1, "Distance= %f\n", distance_mm);
+        chprintf((BaseSequentialStream *)&SDU1, "Distance= %d\n", distance_mm);
 
         //test � clean:
         //chprintf((BaseSequentialStream *)&SDU1, "line width= %d\n", line_width);

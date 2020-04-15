@@ -132,6 +132,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 	uint8_t *img_buff_ptr;
 	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
 	//uint16_t lineWidth = 0;
+	uint8_t temp = 0;
 
 	bool send_to_computer = true;
 
@@ -142,10 +143,18 @@ static THD_FUNCTION(ProcessImage, arg) {
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
 		//Extracts only the red pixels
-		for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
+		//for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
 			//extracts first 5bits of the first byte
 			//takes nothing from the second byte
-			image[i/2] = (uint8_t)img_buff_ptr[i]&0xF8;
+			//image[i/2] = (uint8_t)img_buff_ptr[i]&0xF8;
+		//}
+
+		//Extract green color (6 bits) b5->b10
+		for(uint16_t i = 0; i < (2*IMAGE_BUFFER_SIZE); i++)
+		{
+			temp = (img_buff_ptr[i] & MSK_GREEN1) << 3;
+			temp = temp | ((img_buff_ptr[++i] & MSK_GREEN2) >> 5);
+			image[i/2] = temp;
 		}
 
 		//search for a line in the image and gets its width in pixels

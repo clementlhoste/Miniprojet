@@ -2,6 +2,7 @@
 #include "hal.h"
 #include <chprintf.h>
 #include <usbcfg.h>
+#include <math.h>
 
 #include <main.h>
 #include <camera/po8030.h>
@@ -12,6 +13,7 @@
 static float distance_cm = 0;
 static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	//middle
 static uint16_t line_width = 0;
+float std_dev = 0;
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
@@ -33,6 +35,13 @@ uint16_t extract_line_width(uint8_t *buffer){
 		mean += buffer[i];
 	}
 	mean /= IMAGE_BUFFER_SIZE;
+
+	for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i++)
+	{
+		std_dev += (buffer[i]-mean)*(buffer[i]-mean);
+	}
+		std_dev /= IMAGE_BUFFER_SIZE;
+		std_dev = sqrt(std_dev);
 
 	do{
 		wrong_line = 0;
@@ -176,6 +185,11 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 uint16_t get_line_width(void){
 	return line_width;
+}
+
+float get_std_dev(void)
+{
+	return std_dev;
 }
 
 float get_distance_cm(void){

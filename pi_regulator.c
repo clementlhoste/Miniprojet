@@ -67,7 +67,7 @@ static THD_FUNCTION(PiRegulator, arg) {
 
         uint16_t line_width = get_line_width();
 
-        //test à clean:
+        //test ï¿½ clean:
         //chprintf((BaseSequentialStream *)&SDU1, "line width= %d\n", line_width);
         //chprintf((BaseSequentialStream *)&SDU1, "line pos= %d\n", get_line_position());
         //_Bool intersection = ((line_width && line_width < 130) || line_width > 450); //MAGIC NUMBER

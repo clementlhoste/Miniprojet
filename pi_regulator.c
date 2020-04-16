@@ -13,7 +13,7 @@
 #include "../lib/e-puck2_main-processor/src/leds.h"
 
 //simple PI regulator implementation
-int16_t pi_regulator(uint16_t distance, uint16_t goal){
+int16_t pi_regulator(uint16_t distance, uint16_t goal, int8_t mode){
 
 	int16_t error = 0;
 	int16_t speed = 0;
@@ -31,14 +31,30 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal){
 
 	sum_error += error;
 
-	//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
-	if(sum_error > MAX_SUM_ERROR/2){
-		sum_error = MAX_SUM_ERROR;
-	}else if(sum_error < -MAX_SUM_ERROR/2){
-		sum_error = -MAX_SUM_ERROR;
+
+
+	if(mode == NORMAL) //line following
+	{
+		//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
+		if(sum_error > MAX_SUM_ERROR_L/2){
+			sum_error = MAX_SUM_ERROR_L;
+		}else if(sum_error < -MAX_SUM_ERROR_L/2){
+			sum_error = -MAX_SUM_ERROR_L;
+		}
+		speed = KPL * error + KIL * sum_error;
 	}
 
-	speed = KP * error + KI * sum_error;
+	else if(mode == OBSTACLE)
+	{
+		//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
+		if(sum_error > MAX_SUM_ERROR_O/2){
+			sum_error = MAX_SUM_ERROR_O;
+		}else if(sum_error < -MAX_SUM_ERROR_O/2){
+			sum_error = -MAX_SUM_ERROR_O;
+		}
+
+		speed = KPO * error + KIO * sum_error;
+	}
 
     return speed;
 }
@@ -73,7 +89,9 @@ static THD_FUNCTION(PiRegulator, arg) {
         _Bool intersection = (line_width && line_width < 120); //line_width > 290 ||
 
         //computes a correction factor to let the robot rotate to be in front of the line
-        speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
+        //speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
+
+        speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, mode);
 
         //if the line is nearly in front of the camera, don't rotate
         if(abs(speed_correction) < ROTATION_THRESHOLD || speed == 0){
@@ -163,8 +181,8 @@ static THD_FUNCTION(PiRegulator, arg) {
        // chprintf((BaseSequentialStream *)&SDU1, "speed, speed cor %d, %d\n", speed, speed_correction);
 
         //applies the speed from the PI regulator and the correction for the rotation
-		right_motor_set_speed(speed - ROTATION_COEFF * speed_correction);
-		left_motor_set_speed(speed + ROTATION_COEFF * speed_correction);
+		right_motor_set_speed(speed - speed_correction); //ROTATION_COEFF *
+		left_motor_set_speed(speed + speed_correction); //ROTATION_COEFF *
 
         //10Hz soit 100ms d'attente
         chThdSleepUntilWindowed(time, time + MS2ST(10));

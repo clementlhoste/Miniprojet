@@ -70,7 +70,15 @@ static THD_FUNCTION(PiRegulator, arg) {
         //test à clean:
         //chprintf((BaseSequentialStream *)&SDU1, "line width= %d\n", line_width);
         //chprintf((BaseSequentialStream *)&SDU1, "line pos= %d\n", get_line_position());
-        _Bool intersection = (line_width && line_width < 120); //line_width > 290 ||
+        //_Bool intersection = ((line_width && line_width < 130) || line_width > 450); //MAGIC NUMBER
+
+        _Bool intersection = (get_std_dev() <= 2) ;
+
+        //if(mode != INTERSECTION && intersection)
+        	//chprintf((BaseSequentialStream *)&SDU1, "int line width= %d\n", line_width);
+
+        //chprintf((BaseSequentialStream *)&SDU1, "standard deviation= %f\n", get_std_dev());
+
 
         //computes a correction factor to let the robot rotate to be in front of the line
         speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
@@ -85,7 +93,7 @@ static THD_FUNCTION(PiRegulator, arg) {
         {
         	case NORMAL:
         		//statements
-        		speed = 500; //MAGIC NB
+        		speed = 400; //MAGIC NB
         		if(distance_mm <= GOAL_DISTANCE)
         			mode = OBSTACLE;
         		else if(intersection)
@@ -104,7 +112,7 @@ static THD_FUNCTION(PiRegulator, arg) {
         		set_led(LED5,1);
         		speed_correction= 0; //bloquer
     			speed = -500; //MAGIC NB
-        		if(distance_mm >= 1000) //MAGIC NUMBER
+        		if(distance_mm >= 100) //MAGIC NUMBER
         			mode = ATTAQUE;
         	break;
 
@@ -120,11 +128,12 @@ static THD_FUNCTION(PiRegulator, arg) {
         	case INTERSECTION:
         		//statements
         		speed_correction = 0;
-        		speed = 300;
-        		//chprintf((BaseSequentialStream *)&SDU1, "line width= %d\n", line_width);
+        		speed = 200;
+        		//chprintf((BaseSequentialStream *)&SDU1, "int line width= %d\n", line_width);
         		set_led(LED1,0);
-        		set_body_led(1);
-        		if(left_motor_get_pos()>= 270 && right_motor_get_pos()>= 270) // 1.5*CONV_CM2STEP MAGIC NB
+        		//set_body_led(1);
+        		set_rgb_led(LED2,200,0,0);
+        		if(left_motor_get_pos()>= 350 && right_motor_get_pos()>= 350) // 1.5*CONV_CM2STEP MAGIC NB
         		{
         		    speed=0;
         		    left_motor_set_pos(0);
@@ -140,17 +149,18 @@ static THD_FUNCTION(PiRegulator, arg) {
 
         	case CHOIX_CHEMIN:
         	//statements
-        		speed_correction = 280;
+        		speed_correction = 250;
         		speed = 0;
         		set_led(LED3,1);
-        		if((abs(left_motor_get_pos())>= 270) && (abs(right_motor_get_pos())>= 270)) //(PERIMETER_EPUCK*CONV_CM2STEP/4+1)
+        		if((abs(left_motor_get_pos())>= 300) && (abs(right_motor_get_pos())>= 300)) //(PERIMETER_EPUCK*CONV_CM2STEP/4+1)
         		{
         			speed=0;
         			//chprintf((BaseSequentialStream *)&SDU1, "Pause2\n");
         			//chThdSleepMilliseconds(1000);
         	        mode = NORMAL;
         	        set_led(LED3,0);
-        	        set_body_led(0);
+        	        //set_body_led(0);
+        	        set_rgb_led(LED2,0,0,0);
         	        //chprintf((BaseSequentialStream *)&SDU1, "Retour norm\n");
         		}
         	    //chprintf((BaseSequentialStream *)&SDU1, "mode choix chemin\n");

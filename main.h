@@ -16,14 +16,18 @@ extern "C" {
 #define MIN_LINE_WIDTH			40
 #define ROTATION_THRESHOLD		10
 #define ROTATION_COEFF			2
-#define PXTOCM					1570.0f //experimental value
+#define PXTOCM					1570.0f // Experimental value used for the conversion of pixel data to cm
 #define GOAL_DISTANCE 			40.0f
 #define MAX_DISTANCE 			25.0f
-#define ERROR_THRESHOLD			5.0f	//[mm] because of the noise of the camera/T
-#define KPO						200.0f	//parameters for obstacle detection
-#define KIO 					1.6f	//must not be zero
-#define KPL						2.0f	//parameters for line follow
-#define KIL 					0.0f
+#define ERROR_THRESHOLD			5.0f 	// [mm] because of the noise of the TOF
+#define SPEED_DE_CROISIERE		400 		// vitesse de déplacement lorsque mode normal
+#define VITESSE_RECUL			-500		// vitesse de déplacement lorsque obstacle détecté
+#define KPO						200.0f	// Parameters for the obstacle management PID
+#define KIO 					    1.6f  	// must not be zero
+
+#define KPL						2.0f  	// Parameters for line alignment PID --> A REESSAYER
+#define KIL 				     	0.0f
+
 #define MAX_SUM_ERROR_O			(MOTOR_SPEED_LIMIT/KIO)
 #define MAX_SUM_ERROR_L			(700/KIL) //MAGIC NB
 #define PERIMETER_EPUCK			13

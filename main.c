@@ -14,7 +14,7 @@
 
 #include <pi_regulator.h>
 #include <process_image.h>
-#include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
+#include "..\lib\e-puck2_main-processor\src\sensors\VL53L0X\VL53L0X.h"
 
 void SendUint8ToComputer(uint8_t* data, uint16_t size) 
 {

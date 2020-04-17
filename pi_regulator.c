@@ -31,9 +31,7 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, int8_t mode){
 
 	sum_error += error;
 
-
-
-	if(mode == NORMAL) //line following
+	if(mode == NORMAL) //Line alignment PID
 	{
 		//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
 		if(sum_error > MAX_SUM_ERROR_L/2){
@@ -41,10 +39,11 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, int8_t mode){
 		}else if(sum_error < -MAX_SUM_ERROR_L/2){
 			sum_error = -MAX_SUM_ERROR_L;
 		}
+
 		speed = KPL * error + KIL * sum_error;
 	}
 
-	else if(mode == OBSTACLE)
+	else if(mode == OBSTACLE) //Obstacle management PID
 	{
 		//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
 		if(sum_error > MAX_SUM_ERROR_O/2){
@@ -70,9 +69,9 @@ static THD_FUNCTION(PiRegulator, arg) {
 
     int16_t speed = 0;
     int16_t speed_correction = 0;
-    //mode helps to make decisions
-    static int8_t mode = NORMAL;
 
+    //mode variable is a state variable used to adapt the epuck2 behavior
+    static int8_t mode = NORMAL;
 
     while(1){
         time = chVTGetSystemTime();
@@ -81,21 +80,10 @@ static THD_FUNCTION(PiRegulator, arg) {
         uint16_t distance_mm;
         distance_mm = VL53L0X_get_dist_mm();
 
-        //chprintf((BaseSequentialStream *)&SDU1, "Distance= %d\n", distance_mm);
-
-        //test � clean:
-        //chprintf((BaseSequentialStream *)&SDU1, "line width= %d\n", line_width);
-        //chprintf((BaseSequentialStream *)&SDU1, "line pos= %d\n", get_line_position());
-        //_Bool intersection = ((line_width && line_width < 130) || line_width > 450); //MAGIC NUMBER
-
         _Bool intersection = (get_std_dev() <= 2) ;
 
-        //if(mode != INTERSECTION && intersection)
-        	//chprintf((BaseSequentialStream *)&SDU1, "int line width= %d\n", line_width);
 
-        //chprintf((BaseSequentialStream *)&SDU1, "standard deviation= %f\n", get_std_dev());
-
-
+        //IF WE ARE NOT ABLE TO IMPLEMENT A SATISFYING LINE ALIGNMENT PID
         //computes a correction factor to let the robot rotate to be in front of the line
         //speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
 
@@ -109,86 +97,71 @@ static THD_FUNCTION(PiRegulator, arg) {
         //mode change
         switch(mode)
         {
-        	case NORMAL:
-        		//statements
-        		speed = 400; //MAGIC NB
-        		if(distance_mm <= GOAL_DISTANCE)
-        			mode = OBSTACLE;
-        		else if(intersection)
-        		{
-        			mode = INTERSECTION;
-        			left_motor_set_pos(0);
-        			right_motor_set_pos(0);
-        		}
-        		//chprintf((BaseSequentialStream *)&SDU1, "mode norm\n");
-        		set_led(LED1,1);
+        		case NORMAL:
+        			//statements
+        			speed = SPEED_DE_CROISIERE;
+        			if(distance_mm <= GOAL_DISTANCE)
+        				mode = OBSTACLE;
+        			else if(intersection)
+        			{
+        				mode = INTERSECTION;
+        				left_motor_set_pos(0);
+        				right_motor_set_pos(0);
+        			}
 
-        	break;
+        			set_led(LED1,1);
+        			break;
 
-        	case OBSTACLE:
-        		//statements
-        		set_led(LED5,1);
-        		speed_correction= 0; //bloquer
-    			speed = -500; //MAGIC NB
-        		if(distance_mm >= 100) //MAGIC NUMBER
-        			mode = ATTAQUE;
-        	break;
+        		case OBSTACLE:
+        			//statements
+        			set_led(LED5,1);
+        			speed_correction = 0; // bloquer la rotation
+        			speed = VITESSE_RECUL;
+        			if(distance_mm >= 100) //MAGIC NUMBER
+        				mode = ATTAQUE;
+        			break;
 
-        	case ATTAQUE:
-        		//statements
-        		speed_correction = 0;
-        		set_led(LED5,0);
-        		speed = 700;
-        		if(distance_mm >= 110)
-        			mode = NORMAL;
-        	break;
+        		case ATTAQUE:
+        			//statements
+        			speed_correction = 0; // pas sure de ca
+        			set_led(LED5,0);
+        			speed = 700;
+        			if(distance_mm >= 110)
+        				mode = NORMAL;
+        			break;
 
-        	case INTERSECTION:
-        		//statements
-        		speed_correction = 0;
-        		speed = 200;
-        		//chprintf((BaseSequentialStream *)&SDU1, "int line width= %d\n", line_width);
-        		set_led(LED1,0);
-        		//set_body_led(1);
-        		set_rgb_led(LED2,200,0,0);
-        		if(left_motor_get_pos()>= 350 && right_motor_get_pos()>= 350) // 1.5*CONV_CM2STEP MAGIC NB
-        		{
-        		    speed=0;
-        		    left_motor_set_pos(0);
-        		    right_motor_set_pos(0);
-        		    //chprintf((BaseSequentialStream *)&SDU1, "Pause\n");
-        			mode = CHOIX_CHEMIN;
-        			//chprintf((BaseSequentialStream *)&SDU1, "va tourner\n");
-        		}
+        		case INTERSECTION:
+        			//statements
+        			speed_correction = 0;
+        			speed = 200;
+        			set_led(LED1,0);
+        			set_rgb_led(LED2,200,0,0);
+        			if(left_motor_get_pos()>= 350 && right_motor_get_pos()>= 350) // 1.5*CONV_CM2STEP MAGIC NB
+        			{
+        				speed=0;
+        				left_motor_set_pos(0);
+        				right_motor_set_pos(0);
+        				mode = CHOIX_CHEMIN;
+        			}
+        			break;
 
-        		//if(abs(left_motor_get_pos())>=PERIMETER_EPUCK/4 && abs(right_motor_get_pos())>=PERIMETER_EPUCK/4)
-        			//mode = NORMAL;
-        	break;
+        		case CHOIX_CHEMIN:
+        			//statements
+        			speed_correction = 250;
+        			speed = 0;
+        			set_led(LED3,1);
+        			if((abs(left_motor_get_pos())>= 300) && (abs(right_motor_get_pos())>= 300)) //(PERIMETER_EPUCK*CONV_CM2STEP/4+1)
+        			{
+        				speed=0;
+        				mode = NORMAL;
+        				set_led(LED3,0);
+        				set_rgb_led(LED2,0,0,0);
+        			}
+        			break;
 
-        	case CHOIX_CHEMIN:
-        	//statements
-        		speed_correction = 250;
-        		speed = 0;
-        		set_led(LED3,1);
-        		if((abs(left_motor_get_pos())>= 300) && (abs(right_motor_get_pos())>= 300)) //(PERIMETER_EPUCK*CONV_CM2STEP/4+1)
-        		{
-        			speed=0;
-        			//chprintf((BaseSequentialStream *)&SDU1, "Pause2\n");
-        			//chThdSleepMilliseconds(1000);
-        	        mode = NORMAL;
-        	        set_led(LED3,0);
-        	        //set_body_led(0);
-        	        set_rgb_led(LED2,0,0,0);
-        	        //chprintf((BaseSequentialStream *)&SDU1, "Retour norm\n");
-        		}
-        	    //chprintf((BaseSequentialStream *)&SDU1, "mode choix chemin\n");
-        	break;
-
-        	default:
-        		chprintf((BaseSequentialStream *)&SDU1, "MODE ERORR");
-        }
-
-       // chprintf((BaseSequentialStream *)&SDU1, "speed, speed cor %d, %d\n", speed, speed_correction);
+        		default:
+        			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR");
+        	}
 
         //applies the speed from the PI regulator and the correction for the rotation
 		right_motor_set_speed(speed - speed_correction); //ROTATION_COEFF *

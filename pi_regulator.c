@@ -117,15 +117,16 @@ static THD_FUNCTION(PiRegulator, arg) {
         			set_led(LED5,1);
         			speed_correction = 0; // bloquer la rotation
         			speed = VITESSE_RECUL;
-        			if(distance_mm >= 100) //MAGIC NUMBER
-        				mode = ATTAQUE;
+        			if(distance_mm >= 300) //MAGIC NUMBER, normalement 100. avec 300, on dépasse l'intersection
+        				mode = ATTAQUE;		// cette intersection est reconnue -> le robot tourne = PBM
         			break;
 
         		case ATTAQUE:
         			//statements
-        			speed_correction = 0; // pas sure de ca
+        			speed_correction = 0; // pas sure de ca (éviter de trop dévier, à vérifier)
+        			set_led(LED1,0);
         			set_led(LED5,0);
-        			speed = 700;
+        			speed = MOTOR_SPEED_LIMIT; // vitesse max
         			if(distance_mm >= 110)
         				mode = NORMAL;
         			break;

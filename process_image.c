@@ -16,7 +16,7 @@ static uint16_t line_width = 0;
 float std_dev = 0;
 
 //semaphore
-static BSEMAPHORE_DECL(image_ready_sem, TRUE);
+static BSEMAPHORE_DECL(image_ready_sem, TRUE); //WTF
 
 /*
  *  Returns the line's width extracted from the image buffer given

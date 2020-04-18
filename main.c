@@ -11,6 +11,7 @@
 #include <motors.h>
 #include <camera/po8030.h>
 #include <chprintf.h>
+#include <spi_comm.h>
 
 #include <process_image.h>
 #include <robot_management.h>
@@ -51,6 +52,8 @@ int main(void)
 	po8030_start();
 	//inits the motors
 	motors_init();
+	//allows us to use the rgb leds
+	spi_comm_start();
 
 	//starts the ToF Thread
 	VL53L0X_start();

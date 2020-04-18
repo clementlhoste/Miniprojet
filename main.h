@@ -22,6 +22,7 @@ extern "C" {
 #define MAX_DISTANCE 			25.0f
 #define DISTANCE_CHARGE			100 		// distance de recul du robot avant de dégommer l'obstacle (démo 2)
 #define VITESSE_APPROCHE_INT		200
+#define VITESSE_ROT_CHEMIN    	250
 #define PERIMETER_EPUCK			13
 #define ROTATION_THRESHOLD		10
 #define ROTATION_COEFF			2

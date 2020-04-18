@@ -3,8 +3,6 @@
 #include <math.h>
 #include <usbcfg.h>
 #include <chprintf.h>
-
-
 #include <main.h>
 #include <motors.h>
 #include <process_image.h>
@@ -58,6 +56,74 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, int8_t mode){
     return speed;
 }
 
+_Bool choix_chemin(int16_t* vitesse_rotation)
+{
+	set_rgb_led(LED2,0,0,0);
+	set_led(LED3,0);
+	static int8_t recherche_chemin = RIGHT;
+
+	switch(recherche_chemin)
+	{
+		//Dans un premier temps vérifie s'il ya un chemin à droite de l'intersection, si oui y va
+		//300 correspond à (PERIMETER_EPUCK*CONV_CM2STEP/4+1) et considérations empiriques pour bien touner à 90°
+		case RIGHT:
+			*vitesse_rotation = VITESSE_ROT_CHEMIN;
+			if((abs(left_motor_get_pos()) >= 300) && (abs(right_motor_get_pos()) >= 300)) //MAGIC NB
+			{
+				if(abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<30)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					return TRUE; //chemin sélectionné
+				else
+				{
+					recherche_chemin = FRONT;
+					left_motor_set_pos(0);
+					right_motor_set_pos(0);
+				}
+			}
+			return FALSE;
+			break;
+
+		case FRONT:
+			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
+			if((abs(left_motor_get_pos()) >= 300) && (abs(right_motor_get_pos()) >= 300)) //MAGIC NB
+			{
+				if(abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<30)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					return TRUE; //chemin sélectionné
+				else
+					recherche_chemin = LEFT;
+			}
+			return FALSE;
+			break;
+
+		case LEFT:
+			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
+			if((abs(left_motor_get_pos()) >= 600) && (abs(right_motor_get_pos()) >= 600)) //MAGIC NB
+			{
+				if(abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<30)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					return TRUE; //chemin sélectionné
+				else
+					recherche_chemin = LEFT;
+			}
+			return FALSE;
+			break;
+
+		case BACK:
+			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
+			if((abs(left_motor_get_pos()) >= 900) && (abs(right_motor_get_pos()) >= 900)) //MAGIC NB
+			{
+				if(abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<30)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					return TRUE; //chemin sélectionné
+				else
+					recherche_chemin = LEFT;
+			}
+			return FALSE;
+			break;
+
+		default:
+			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR");
+			return FALSE;
+	}
+}
+
 
 static THD_WORKING_AREA(waRob_management, 256);
 static THD_FUNCTION(Rob_management, arg) {
@@ -93,7 +159,7 @@ static THD_FUNCTION(Rob_management, arg) {
 
         //if the line is nearly in front of the camera, don't rotate
         if(abs(speed_correction) < ROTATION_THRESHOLD || speed == 0){
-        	speed_correction = 0;
+         	speed_correction = 0;
         }
 
         _Bool intersection = (get_std_dev() <= 2) ;
@@ -130,7 +196,7 @@ static THD_FUNCTION(Rob_management, arg) {
 
         		case ATTAQUE:
         			//statements
-        			speed_correction = 0; // pas sure de ca
+        			speed_correction = 0; // pas sure de ça
         			set_led(LED5,0);
         			speed = MOTOR_SPEED_LIMIT;
         			if(distance_mm >= 110)
@@ -154,15 +220,12 @@ static THD_FUNCTION(Rob_management, arg) {
 
         		case CHOIX_CHEMIN:
         			//statements
-        			speed_correction = 250;
         			speed = 0;
         			set_led(LED3,1);
-        			if((abs(left_motor_get_pos())>= 300) && (abs(right_motor_get_pos())>= 300)) //(PERIMETER_EPUCK*CONV_CM2STEP/4+1)
+        			if(choix_chemin(&speed_correction))
         			{
-        				speed=0;
         				mode = NORMAL;
-        				set_led(LED3,0);
-        				set_rgb_led(LED2,0,0,0);
+        				speed_correction = 0;
         			}
         			break;
 
@@ -171,8 +234,8 @@ static THD_FUNCTION(Rob_management, arg) {
         	}
 
         //applies the speed from the PI regulator and the correction for the rotation
-		right_motor_set_speed(speed - speed_correction); //ROTATION_COEFF *
-		left_motor_set_speed(speed + speed_correction); //ROTATION_COEFF *
+		right_motor_set_speed(speed - ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
+		left_motor_set_speed(speed + ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
 
         //10Hz soit 100ms d'attente
         chThdSleepUntilWindowed(time, time + MS2ST(10));

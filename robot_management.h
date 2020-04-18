@@ -3,7 +3,7 @@
 
 enum {NORMAL, OBSTACLE, ATTAQUE, INTERSECTION, CHOIX_CHEMIN};
 enum dir {RIGHT, FRONT, LEFT, BACK};
-
+enum {DEMO1, DEMO2};
 #define CONV_CM2STEP 1000/13 // MAGIC NB
 
 //start the PI regulator thread

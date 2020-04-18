@@ -7,8 +7,8 @@
 
 #include <main.h>
 #include <motors.h>
-#include <pi_regulator.h>
 #include <process_image.h>
+#include <robot_management.h>
 #include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
 #include "../lib/e-puck2_main-processor/src/leds.h"
 
@@ -59,8 +59,8 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, int8_t mode){
 }
 
 
-static THD_WORKING_AREA(waPiRegulator, 256);
-static THD_FUNCTION(PiRegulator, arg) {
+static THD_WORKING_AREA(waRob_management, 256);
+static THD_FUNCTION(Rob_management, arg) {
 
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
@@ -172,6 +172,6 @@ static THD_FUNCTION(PiRegulator, arg) {
     }
 }
 
-void pi_regulator_start(void){
-	chThdCreateStatic(waPiRegulator, sizeof(waPiRegulator), NORMALPRIO+10, PiRegulator, NULL);
+void rob_management_start(void){
+	chThdCreateStatic(waRob_management, sizeof(waRob_management), NORMALPRIO+10, Rob_management, NULL);
 }

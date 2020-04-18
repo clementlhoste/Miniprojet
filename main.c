@@ -12,9 +12,9 @@
 #include <camera/po8030.h>
 #include <chprintf.h>
 
-#include <pi_regulator.h>
 #include <process_image.h>
-#include "..\lib\e-puck2_main-processor\src\sensors\VL53L0X\VL53L0X.h"
+#include <robot_management.h>
+#include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
 
 void SendUint8ToComputer(uint8_t* data, uint16_t size) 
 {
@@ -56,7 +56,7 @@ int main(void)
 	VL53L0X_start();
 
 	//starts the threads for the pi regulator and the processing of the image
-	pi_regulator_start();
+	rob_management_start();
 	process_image_start();
 
     /* Infinite loop. */

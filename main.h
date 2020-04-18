@@ -29,7 +29,7 @@ extern "C" {
 #define KIL 				     	0.0f
 
 #define MAX_SUM_ERROR_O			(MOTOR_SPEED_LIMIT/KIO)
-#define MAX_SUM_ERROR_L			(700/KIL) //MAGIC NB
+#define MAX_SUM_ERROR_L			((MOTOR_SPEED_LIMIT-SPEED_DE_CROISIERE)/KIL)
 #define PERIMETER_EPUCK			13
 
 /** Robot wide IPC bus. */

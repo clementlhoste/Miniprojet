@@ -21,38 +21,20 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, int8_t mode){
 	error = (int)distance - (int)goal;
 
 	//disables the PI regulator if the error is to small
-	//this avoids to always move as we cannot exactly be where we want and 
-	//the ToF is a bit noisy.
+	//this avoids to always move as we cannot exactly be aligned and the camera is a bit noisy
 	if(fabs(error) < ERROR_THRESHOLD){
 		return 0;
 	}
 
 	sum_error += error;
-
-	if(mode == NORMAL) //Line alignment PID
-	{
-		//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
-		if(sum_error > MAX_SUM_ERROR_L/2){
-			sum_error = MAX_SUM_ERROR_L;
-		}else if(sum_error < -MAX_SUM_ERROR_L/2){
-			sum_error = -MAX_SUM_ERROR_L;
-		}
-
-		speed = KPL * error + KIL * sum_error;
+	//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
+	if(sum_error > MAX_SUM_ERROR_L/2){
+		sum_error = MAX_SUM_ERROR_L;
+	}else if(sum_error < -MAX_SUM_ERROR_L/2){
+		sum_error = -MAX_SUM_ERROR_L;
 	}
 
-	else if(mode == OBSTACLE) //Obstacle management PID
-	{
-		//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
-		if(sum_error > MAX_SUM_ERROR_O/2){
-			sum_error = MAX_SUM_ERROR_O;
-		}else if(sum_error < -MAX_SUM_ERROR_O/2){
-			sum_error = -MAX_SUM_ERROR_O;
-		}
-
-		speed = KPO * error + KIO * sum_error;
-	}
-
+	speed = KPL * error + KIL * sum_error;
     return speed;
 }
 

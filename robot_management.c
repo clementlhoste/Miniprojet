@@ -10,8 +10,10 @@
 #include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
 #include "../lib/e-puck2_main-processor/src/leds.h"
 
+static _Bool demo = DEMO1;
+
 //simple PI regulator implementation to manage line alignment and obstacles
-int16_t pi_regulator(uint16_t distance, uint16_t goal, int8_t mode){
+int16_t pi_regulator(uint16_t distance, uint16_t goal){
 
 	int16_t error = 0;
 	int16_t speed = 0;
@@ -124,7 +126,6 @@ static THD_FUNCTION(Rob_management, arg) {
     //DEMO1 : line alignment, robot moving through the maze, displacement algorithm, management of obstacles as walls
     //DEMO2 : same but now the robot can go through obstacles like a battering ram, voice recognition, voice command "go" etc..PNN
     static int8_t mode = NORMAL;
-    static _Bool demo = DEMO1;
     static _Bool condition_degommage = true;
 
     while(1){
@@ -137,7 +138,7 @@ static THD_FUNCTION(Rob_management, arg) {
         //IF WE ARE NOT ABLE TO IMPLEMENT A SATISFYING LINE ALIGNMENT PID
         //computes a correction factor to let the robot rotate to be in front of the line
         speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
-        //speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, mode);
+        //speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2);
 
         //if the line is nearly in front of the camera, don't rotate
         if(abs(speed_correction) < ROTATION_THRESHOLD || speed == 0){
@@ -152,8 +153,20 @@ static THD_FUNCTION(Rob_management, arg) {
         		case NORMAL:
         			//statements
         			speed = SPEED_DE_CROISIERE;
-        			if(distance_mm <= GOAL_DISTANCE)
-        				mode = OBSTACLE;
+        			if(distance_mm <= GOAL_DISTANCE) //si on est dans demo 2 et obstacle détecté on rentre en mode obstacle
+        			{
+        				if(demo) mode = OBSTACLE;
+        				else
+        				{
+        					left_motor_set_pos(0);
+        					right_motor_set_pos(0);
+        					right_motor_set_speed(-ROTATION_COEFF*VITESSE_ROT_CHEMIN);
+        					left_motor_set_speed(ROTATION_COEFF*VITESSE_ROT_CHEMIN);
+        					while((abs(left_motor_get_pos()) <= 600) && (abs(right_motor_get_pos()) <= 600));
+        					speed_correction = 0;
+						// mode reste normal, demi tour devant l'obstacle effectué (démo 1)
+        				}
+        			}
         			else if(intersection)
         			{
         				mode = INTERSECTION;

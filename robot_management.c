@@ -52,6 +52,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 {
 
 	static int8_t recherche_chemin = RIGHT;
+	static uint8_t compteur = 0;
 
 	switch(recherche_chemin)
 	{
@@ -70,7 +71,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 
 				//ajouter un compteur
 				*vitesse_rotation = 0;
-				static uint8_t compteur = 0;
+
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
@@ -96,18 +97,23 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
 			if((abs(left_motor_get_pos()) >= 300) && (abs(right_motor_get_pos()) >= 300)) //MAGIC NB
 			{
-				right_motor_set_speed(0);
-				left_motor_set_speed(0);
-				wait(temp_pause);
-				set_rgb_led(LED2,0,0,0);
-				set_rgb_led(LED8,0,0,0);
-				if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+
+				*vitesse_rotation = 0;
+
+				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
-					recherche_chemin = RIGHT;
-					return TRUE; //chemin sélectionné
+					compteur = 0;
+					set_rgb_led(LED2,0,0,0);
+					set_rgb_led(LED8,0,0,0);
+					if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					{
+						recherche_chemin = RIGHT;
+						return TRUE; //chemin sélectionné
+					}
+					else
+						recherche_chemin = LEFT;
+
 				}
-				else
-					recherche_chemin = LEFT;
 			}
 			return FALSE;
 			break;
@@ -117,17 +123,20 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
 			if((abs(left_motor_get_pos()) >= 600) && (abs(right_motor_get_pos()) >= 600)) //MAGIC NB
 			{
-				right_motor_set_speed(0);
-				left_motor_set_speed(0);
-				wait(temp_pause);
-				if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+				*vitesse_rotation = 0;
+
+				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
-					recherche_chemin = RIGHT; //reinitialise pour prochain
-					set_led(LED7,0);
-					return TRUE; //chemin sélectionné
+					compteur = 0;
+					if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					{
+						recherche_chemin = RIGHT; //reinitialise pour prochain
+						set_led(LED7,0);
+						return TRUE; //chemin sélectionné
+					}
+					else
+						recherche_chemin = BACK;
 				}
-				else
-					recherche_chemin = BACK;
 			}
 			return FALSE;
 			break;
@@ -138,9 +147,14 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			if((abs(left_motor_get_pos()) >= 900) && (abs(right_motor_get_pos()) >= 900)) //MAGIC NB
 			{
 				set_led(LED5,0);
-				right_motor_set_speed(0);
-				left_motor_set_speed(0);
-				wait(temp_pause); //on suppose que dans tous les cas il y a une ligne
+
+				*vitesse_rotation = 0;
+
+				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
+				{
+					compteur = 0;
+
+				//on suppose que dans tous les cas il y a une ligne
 				//if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 				//{
 					recherche_chemin = RIGHT;
@@ -148,6 +162,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				//}
 				//else
 					//recherche_chemin = LEFT;
+				}
 			}
 			return FALSE;
 			break;
@@ -214,7 +229,7 @@ static THD_FUNCTION(Rob_management, arg) {
         					right_motor_set_pos(0);
         					right_motor_set_speed(-ROTATION_COEFF*VITESSE_ROT_CHEMIN);
         					left_motor_set_speed(ROTATION_COEFF*VITESSE_ROT_CHEMIN);
-        					while((abs(left_motor_get_pos()) <= 600) && (abs(right_motor_get_pos()) <= 600));
+        					while((abs(left_motor_get_pos()) <= 620) && (abs(right_motor_get_pos()) <= 620));
         					speed_correction = 0;
         					set_rgb_led(LED4,0,0,0);
         					set_rgb_led(LED6,0,0,0);

@@ -9,8 +9,11 @@
 #include <robot_management.h>
 #include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
 #include "../lib/e-puck2_main-processor/src/leds.h"
+#include "../lib/e-puck2_main-processor/src/epuck1x/utility/utility.h"
 
 static _Bool demo = DEMO1;
+
+#define temp_pause 18300000
 
 //simple PI regulator implementation to manage line alignment and obstacles
 int16_t pi_regulator(uint16_t distance, uint16_t goal){
@@ -22,6 +25,8 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal){
 
 	error = (int)distance - (int)goal;
 
+	//chprintf((BaseSequentialStream *)&SDU1, "error %d", error);
+
 	//disables the PI regulator if the error is to small
 	//this avoids to always move as we cannot exactly be aligned and the camera is a bit noisy
 	if(fabs(error) < ERROR_THRESHOLD){
@@ -30,11 +35,14 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal){
 
 	sum_error += error;
 	//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
-	if(sum_error > MAX_SUM_ERROR_L/2){
+	if(sum_error > MAX_SUM_ERROR_L){
 		sum_error = MAX_SUM_ERROR_L;
-	}else if(sum_error < -MAX_SUM_ERROR_L/2){
+	}else if(sum_error < -MAX_SUM_ERROR_L){
 		sum_error = -MAX_SUM_ERROR_L;
 	}
+
+	//chprintf((BaseSequentialStream *)&SDU1, "test");
+	//chprintf((BaseSequentialStream *)&SDU1, "sum error %d", sum_error);
 
 	speed = KPL * error + KIL * sum_error;
     return speed;
@@ -42,8 +50,7 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal){
 
 _Bool choix_chemin(int16_t* vitesse_rotation)
 {
-	set_rgb_led(LED2,0,0,0);
-	set_led(LED3,0);
+
 	static int8_t recherche_chemin = RIGHT;
 
 	switch(recherche_chemin)
@@ -52,26 +59,53 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 		//300 correspond à (PERIMETER_EPUCK*CONV_CM2STEP/4+1) et considérations empiriques pour bien touner à 90°
 		case RIGHT:
 			*vitesse_rotation = VITESSE_ROT_CHEMIN;
+			set_led(LED3,1);
 			if((abs(left_motor_get_pos()) >= 300) && (abs(right_motor_get_pos()) >= 300)) //MAGIC NB
 			{
-				if(abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<30)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
-					return TRUE; //chemin sélectionné
-				else
+				//right_motor_set_speed(0);
+				//left_motor_set_speed(0);
+
+				//wait(temp_pause); //semaphore capture image aller et revenir
+				//chThdSleep /Exit/Resume
+
+				//ajouter un compteur
+				*vitesse_rotation = 0;
+				static uint8_t compteur = 0;
+				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
-					recherche_chemin = FRONT;
-					left_motor_set_pos(0);
-					right_motor_set_pos(0);
+					compteur = 0;
+					if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					{		//abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<100
+						return TRUE; //chemin sélectionné
+					}
+					else
+					{
+						recherche_chemin = FRONT;
+						set_led(LED3,0);
+						left_motor_set_pos(0);
+						right_motor_set_pos(0);
+					}
 				}
 			}
 			return FALSE;
 			break;
 
 		case FRONT:
+			set_rgb_led(LED2,200,0,0);
+			set_rgb_led(LED8,200,0,0);
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
 			if((abs(left_motor_get_pos()) >= 300) && (abs(right_motor_get_pos()) >= 300)) //MAGIC NB
 			{
-				if(abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<30)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+				right_motor_set_speed(0);
+				left_motor_set_speed(0);
+				wait(temp_pause);
+				set_rgb_led(LED2,0,0,0);
+				set_rgb_led(LED8,0,0,0);
+				if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+				{
+					recherche_chemin = RIGHT;
 					return TRUE; //chemin sélectionné
+				}
 				else
 					recherche_chemin = LEFT;
 			}
@@ -79,25 +113,41 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			break;
 
 		case LEFT:
+			set_led(LED7,1);
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
 			if((abs(left_motor_get_pos()) >= 600) && (abs(right_motor_get_pos()) >= 600)) //MAGIC NB
 			{
-				if(abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<30)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+				right_motor_set_speed(0);
+				left_motor_set_speed(0);
+				wait(temp_pause);
+				if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+				{
+					recherche_chemin = RIGHT; //reinitialise pour prochain
+					set_led(LED7,0);
 					return TRUE; //chemin sélectionné
+				}
 				else
-					recherche_chemin = LEFT;
+					recherche_chemin = BACK;
 			}
 			return FALSE;
 			break;
 
 		case BACK:
+			set_led(LED5,1);
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
 			if((abs(left_motor_get_pos()) >= 900) && (abs(right_motor_get_pos()) >= 900)) //MAGIC NB
 			{
-				if(abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<30)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+				set_led(LED5,0);
+				right_motor_set_speed(0);
+				left_motor_set_speed(0);
+				wait(temp_pause); //on suppose que dans tous les cas il y a une ligne
+				//if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+				//{
+					recherche_chemin = RIGHT;
 					return TRUE; //chemin sélectionné
-				else
-					recherche_chemin = LEFT;
+				//}
+				//else
+					//recherche_chemin = LEFT;
 			}
 			return FALSE;
 			break;
@@ -137,8 +187,8 @@ static THD_FUNCTION(Rob_management, arg) {
 
         //IF WE ARE NOT ABLE TO IMPLEMENT A SATISFYING LINE ALIGNMENT PID
         //computes a correction factor to let the robot rotate to be in front of the line
-        speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
-        //speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2);
+        //speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
+        speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2);
 
         //if the line is nearly in front of the camera, don't rotate
         if(abs(speed_correction) < ROTATION_THRESHOLD || speed == 0){
@@ -156,14 +206,18 @@ static THD_FUNCTION(Rob_management, arg) {
         			if(distance_mm <= GOAL_DISTANCE) //si on est dans demo 2 et obstacle détecté on rentre en mode obstacle
         			{
         				if(demo) mode = OBSTACLE;
-        				else
+        				else // clean avec un mode demi-tour??
         				{
+        					set_rgb_led(LED4,200,0,0);
+        					set_rgb_led(LED6,200,0,0);
         					left_motor_set_pos(0);
         					right_motor_set_pos(0);
         					right_motor_set_speed(-ROTATION_COEFF*VITESSE_ROT_CHEMIN);
         					left_motor_set_speed(ROTATION_COEFF*VITESSE_ROT_CHEMIN);
         					while((abs(left_motor_get_pos()) <= 600) && (abs(right_motor_get_pos()) <= 600));
         					speed_correction = 0;
+        					set_rgb_led(LED4,0,0,0);
+        					set_rgb_led(LED6,0,0,0);
 						// mode reste normal, demi tour devant l'obstacle effectué (démo 1)
         				}
         			}
@@ -191,7 +245,7 @@ static THD_FUNCTION(Rob_management, arg) {
 
         		case ATTAQUE:
         			//statements
-        			speed_correction = 0; // pas sure de ça
+        			speed_correction = 0; // pas sure de ça, pas ouf si le robot s'est d�cal�, essai avec une correcton?
         			set_led(LED5,0);
         			speed = MOTOR_SPEED_LIMIT;
         			if(distance_mm >= 110)
@@ -204,6 +258,9 @@ static THD_FUNCTION(Rob_management, arg) {
         			speed = VITESSE_APPROCHE_INT;
         			set_led(LED1,0);
         			set_rgb_led(LED2,200,0,0);
+        			set_rgb_led(LED4,200,0,0);
+        			set_rgb_led(LED6,200,0,0);
+        			set_rgb_led(LED8,200,0,0);
         			if(left_motor_get_pos()>= 350 && right_motor_get_pos()>= 350) // 1.5*CONV_CM2STEP MAGIC NB
         			{
         				speed=0;
@@ -216,7 +273,10 @@ static THD_FUNCTION(Rob_management, arg) {
         		case CHOIX_CHEMIN:
         			//statements
         			speed = 0;
-        			set_led(LED3,1);
+        			set_rgb_led(LED2,0,0,0);
+        			set_rgb_led(LED4,0,0,0);
+        			set_rgb_led(LED6,0,0,0);
+        			set_rgb_led(LED8,0,0,0);
         			if(choix_chemin(&speed_correction))
         			{
         				mode = NORMAL;
@@ -229,6 +289,7 @@ static THD_FUNCTION(Rob_management, arg) {
         	}
 
         //applies the speed from the PI regulator and the correction for the rotation
+
 		right_motor_set_speed(speed - ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
 		left_motor_set_speed(speed + ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
 

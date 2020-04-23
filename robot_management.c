@@ -16,12 +16,18 @@ static _Bool demo = DEMO1;
 #define temp_pause 18300000
 
 //simple PI regulator implementation to manage line alignment and obstacles
-int16_t pi_regulator(uint16_t distance, uint16_t goal){
+int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 
 	int16_t error = 0;
 	int16_t speed = 0;
 
 	static int sum_error = 0;
+
+	if(reset)
+	{
+		sum_error = 0;
+		return 0;
+	}
 
 	error = (int)distance - (int)goal;
 
@@ -74,7 +80,10 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
-					if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					//chprintf((BaseSequentialStream *)&SDU1, "std_dev %f", get_std_dev());
+					//chprintf((BaseSequentialStream *)&SDU1, "line width %d \n", get_line_width());
+					//chprintf((BaseSequentialStream *)&SDU1, "line pos %d \n", get_line_position());
+					if(get_std_dev() > 4.5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 					{		//abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<100
 						return TRUE; //chemin sélectionné
 					}
@@ -188,12 +197,6 @@ static THD_FUNCTION(Rob_management, arg) {
         //IF WE ARE NOT ABLE TO IMPLEMENT A SATISFYING LINE ALIGNMENT PID
         //computes a correction factor to let the robot rotate to be in front of the line
         //speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
-        speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2);
-
-        //if the line is nearly in front of the camera, don't rotate
-        if(abs(speed_correction) < ROTATION_THRESHOLD || speed == 0){
-         	speed_correction = 0;
-        }
 
         _Bool intersection = (get_std_dev() <= 2) ;
 
@@ -203,7 +206,18 @@ static THD_FUNCTION(Rob_management, arg) {
         		case NORMAL:
         			//statements
         			speed = SPEED_DE_CROISIERE;
-        			if(distance_mm <= GOAL_DISTANCE) //si on est dans demo 2 et obstacle détecté on rentre en mode obstacle
+        			//set_front_led(1);
+        			set_led(LED1,1);
+
+        			speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0);
+
+        			        //if the line is nearly in front of the camera, don't rotate
+        			if(abs(speed_correction) < ROTATION_THRESHOLD || speed == 0){
+        	         	speed_correction = 0;
+        			}
+
+        			//si distance est initialise (different de 0)
+        			if(distance_mm && (distance_mm < GOAL_DISTANCE)) //si on est dans demo 2 et obstacle détecté on rentre en mode obstacle
         			{
         				if(demo) mode = OBSTACLE;
         				else // clean avec un mode demi-tour??
@@ -219,15 +233,16 @@ static THD_FUNCTION(Rob_management, arg) {
         					set_rgb_led(LED4,0,0,0);
         					set_rgb_led(LED6,0,0,0);
 						// mode reste normal, demi tour devant l'obstacle effectué (démo 1)
+        					//reset sum_error
         				}
         			}
         			else if(intersection)
         			{
         				mode = INTERSECTION;
+        				//set_front_led(0);
         				left_motor_set_pos(0);
         				right_motor_set_pos(0);
         			}
-        			set_led(LED1,1);
         			break;
 
         		case OBSTACLE:
@@ -249,7 +264,11 @@ static THD_FUNCTION(Rob_management, arg) {
         			set_led(LED5,0);
         			speed = MOTOR_SPEED_LIMIT;
         			if(distance_mm >= 110)
+        			{
+        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
         				mode = NORMAL;
+        			}
+
         			break;
 
         		case INTERSECTION:
@@ -280,7 +299,7 @@ static THD_FUNCTION(Rob_management, arg) {
         			if(choix_chemin(&speed_correction))
         			{
         				mode = NORMAL;
-        				speed_correction = 0;
+        				speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
         			}
         			break;
 

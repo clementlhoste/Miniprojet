@@ -31,10 +31,12 @@ extern "C" {
 #define KPO						200.0f	// Parameters for the obstacle management PID
 #define KIO 					1.6f  	// must not be zero
 #define KPL						1.5f  	// Parameters for line alignment PID --> A REESSAYER
-#define KIL 				    0.001f
+#define KIL 				    0.0006f
+//0.00075f
 
 #define MAX_SUM_ERROR_O			(MOTOR_SPEED_LIMIT/KIO)
-#define MAX_SUM_ERROR_L			((MOTOR_SPEED_LIMIT-SPEED_DE_CROISIERE)/KIL)
+#define MAX_SUM_ERROR_L			100/KIL
+//((MOTOR_SPEED_LIMIT-SPEED_DE_CROISIERE)/KIL)
 
 
 /** Robot wide IPC bus. */

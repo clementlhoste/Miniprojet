@@ -109,6 +109,14 @@ uint16_t extract_line_width(uint8_t *buffer){
 	}
 }
 
+//allows to disable automatics settings like Auto Exposure
+// and autowhitebalance. Should improve our demo
+void disable_aebw(void)
+{
+    po8030_set_awb(0);
+    po8030_set_ae(0);
+}
+
 static THD_WORKING_AREA(waCaptureImage, 256);
 static THD_FUNCTION(CaptureImage, arg) {
 
@@ -116,18 +124,24 @@ static THD_FUNCTION(CaptureImage, arg) {
     (void)arg;
 
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 10 + 11 (minimum 2 lines because reasons)
-	po8030_advanced_config(FORMAT_RGB565, 0, 10, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
+	po8030_advanced_config(FORMAT_RGB565, 0, 10, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1); //desactiver balance des blancs après un moment
 	dcmi_enable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
 
     while(1){
-        //starts a capture
+        static _Bool init = TRUE;
+    	//starts a capture
 		dcmi_capture_start();
 		//waits for the capture to be done
 		wait_image_ready();
 		//signals an image has been captured
 		chBSemSignal(&image_ready_sem);
+		if (init)
+		{
+			init = FALSE;
+			//disable_aebw();
+		}
     }
 }
 
@@ -141,7 +155,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 	uint8_t *img_buff_ptr;
 	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
 	//uint16_t lineWidth = 0;
-	uint8_t temp = 0;
+	//uint8_t temp = 0;
 
 	bool send_to_computer = true;
 
@@ -152,19 +166,26 @@ static THD_FUNCTION(ProcessImage, arg) {
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
 		//Extracts only the red pixels
-		//for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
+		for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
 			//extracts first 5bits of the first byte
 			//takes nothing from the second byte
-			//image[i/2] = (uint8_t)img_buff_ptr[i]&0xF8;
+			image[i/2] = (uint8_t)img_buff_ptr[i]&0xF8;
+		}
+
+		//Extracts only the blue pixels
+		//for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
+				//extracts first 5bits of the first byte
+				//takes nothing from the second byte
+				//image[i/2] = (uint8_t)img_buff_ptr[i+1]&0x1F;
 		//}
 
 		//Extract green color (6 bits) b5->b10
-		for(uint16_t i = 0; i < (2*IMAGE_BUFFER_SIZE); i++)
-		{
-			temp = (img_buff_ptr[i] & MSK_GREEN1) << 3;
-			temp = temp | ((img_buff_ptr[++i] & MSK_GREEN2) >> 5);
-			image[i/2] = temp;
-		}
+		//for(uint16_t i = 0; i < (2*IMAGE_BUFFER_SIZE); i++)
+		//{
+			//temp = (img_buff_ptr[i] & MSK_GREEN1) << 3;
+			//temp = temp | ((img_buff_ptr[++i] & MSK_GREEN2) >> 5);
+			//image[i/2] = temp;
+		//}
 
 		//search for a line in the image and gets its width in pixels
 		line_width = extract_line_width(image);

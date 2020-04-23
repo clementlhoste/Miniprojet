@@ -50,6 +50,7 @@ int main(void)
     //starts the camera
     dcmi_start();
 	po8030_start();
+
 	//inits the motors
 	motors_init();
 	//allows us to use the rgb leds
@@ -59,13 +60,14 @@ int main(void)
 	VL53L0X_start();
 
 	//starts the threads for the pi regulator and the processing of the image
-	rob_management_start();
 	process_image_start();
+	rob_management_start();
 
     /* Infinite loop. */
     while (1) {
     	//waits 1 second
         chThdSleepMilliseconds(1000);
+
     }
 }
 

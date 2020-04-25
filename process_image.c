@@ -16,7 +16,7 @@ static uint16_t line_width = 0;
 float std_dev = 0;
 
 //semaphore
-static BSEMAPHORE_DECL(image_ready_sem, TRUE); //WTF
+static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
 /*
  *  Returns the line's width extracted from the image buffer given
@@ -36,7 +36,8 @@ uint16_t extract_line_width(uint8_t *buffer){
 	}
 	mean /= IMAGE_BUFFER_SIZE;
 
-	for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i++)
+	//performs a standard deviation
+	for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i++) //interest in a small window mid +/- 100
 	{
 		std_dev += (buffer[i]-mean)*(buffer[i]-mean);
 	}
@@ -113,8 +114,8 @@ uint16_t extract_line_width(uint8_t *buffer){
 // and autowhitebalance. Should improve our demo
 void disable_aebw(void)
 {
-    po8030_set_awb(0);
-    po8030_set_ae(0);
+    //po8030_set_awb(0);
+    //po8030_set_ae(0);
 }
 
 static THD_WORKING_AREA(waCaptureImage, 256);
@@ -130,18 +131,13 @@ static THD_FUNCTION(CaptureImage, arg) {
 	dcmi_prepare();
 
     while(1){
-        static _Bool init = TRUE;
+
     	//starts a capture
 		dcmi_capture_start();
 		//waits for the capture to be done
 		wait_image_ready();
 		//signals an image has been captured
 		chBSemSignal(&image_ready_sem);
-		if (init)
-		{
-			init = FALSE;
-			//disable_aebw();
-		}
     }
 }
 
@@ -152,6 +148,9 @@ static THD_FUNCTION(ProcessImage, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
+    static _Bool init = TRUE;
+    disable_aebw();
+
 	uint8_t *img_buff_ptr;
 	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
 	//uint16_t lineWidth = 0;
@@ -159,9 +158,16 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 	bool send_to_computer = true;
 
+
     while(1){
     	//waits until an image has been captured
         chBSemWait(&image_ready_sem);
+
+        if (init)
+        {
+        	init = FALSE;
+        	disable_aebw();
+        }
 		//gets the pointer to the array filled with the last image in RGB565    
 		img_buff_ptr = dcmi_get_last_image_ptr();
 

@@ -80,10 +80,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
-					//chprintf((BaseSequentialStream *)&SDU1, "std_dev %f", get_std_dev());
-					//chprintf((BaseSequentialStream *)&SDU1, "line width %d \n", get_line_width());
-					//chprintf((BaseSequentialStream *)&SDU1, "line pos %d \n", get_line_position());
-					if(get_std_dev() > 4.5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 					{		//abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<100
 						return TRUE; //chemin sélectionné
 					}
@@ -110,7 +107,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				wait(temp_pause);
 				set_rgb_led(LED2,0,0,0);
 				set_rgb_led(LED8,0,0,0);
-				if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+				if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 				{
 					recherche_chemin = RIGHT;
 					return TRUE; //chemin sélectionné
@@ -129,7 +126,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				right_motor_set_speed(0);
 				left_motor_set_speed(0);
 				wait(temp_pause);
-				if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+				if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 				{
 					recherche_chemin = RIGHT; //reinitialise pour prochain
 					set_led(LED7,0);
@@ -198,7 +195,7 @@ static THD_FUNCTION(Rob_management, arg) {
         //computes a correction factor to let the robot rotate to be in front of the line
         //speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
 
-        _Bool intersection = (get_std_dev() <= 2) ;
+        _Bool intersection = (get_std_dev() <= 10.5) ;
 
         //mode change
         switch(mode)
@@ -209,6 +206,9 @@ static THD_FUNCTION(Rob_management, arg) {
         			//set_front_led(1);
         			set_led(LED1,1);
 
+        			//chprintf((BaseSequentialStream *)&SDU1, "std_dev %f", get_std_dev());
+        			//chprintf((BaseSequentialStream *)&SDU1, "line width %d", get_line_width());
+        			//chprintf((BaseSequentialStream *)&SDU1, "line pos %d \n", get_line_position());
         			speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0);
 
         			        //if the line is nearly in front of the camera, don't rotate
@@ -276,10 +276,10 @@ static THD_FUNCTION(Rob_management, arg) {
         			speed_correction = 0;
         			speed = VITESSE_APPROCHE_INT;
         			set_led(LED1,0);
-        			set_rgb_led(LED2,200,0,0);
-        			set_rgb_led(LED4,200,0,0);
-        			set_rgb_led(LED6,200,0,0);
-        			set_rgb_led(LED8,200,0,0);
+        			set_rgb_led(LED2,200,200,0);
+        			set_rgb_led(LED4,200,200,0);
+        			set_rgb_led(LED6,200,200,0);
+        			set_rgb_led(LED8,200,200,0);
         			if(left_motor_get_pos()>= 350 && right_motor_get_pos()>= 350) // 1.5*CONV_CM2STEP MAGIC NB
         			{
         				speed=0;

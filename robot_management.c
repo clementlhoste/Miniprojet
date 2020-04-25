@@ -22,10 +22,12 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 	int16_t speed = 0;
 
 	static int sum_error = 0;
+	static int16_t error_pre = 0;
 
 	if(reset)
 	{
 		sum_error = 0;
+		error_pre = 0;
 		return 0;
 	}
 
@@ -50,7 +52,12 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 	//chprintf((BaseSequentialStream *)&SDU1, "test");
 	//chprintf((BaseSequentialStream *)&SDU1, "sum error %d", sum_error);
 
-	speed = KPL * error + KIL * sum_error;
+	if(error_pre)
+		speed = KPL * error + KIL * sum_error + KDL*(error-error_pre);
+	else
+		speed = KPL * error + KIL * sum_error;
+
+	error_pre = error;
     return speed;
 }
 

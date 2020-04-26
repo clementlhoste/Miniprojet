@@ -229,16 +229,19 @@ static THD_FUNCTION(Rob_management, arg) {
         				if(demo) mode = OBSTACLE;
         				else // clean avec un mode demi-tour??
         				{
+
         					set_rgb_led(LED4,200,0,0);
         					set_rgb_led(LED6,200,0,0);
+        					set_led(LED1,1);
         					left_motor_set_pos(0);
         					right_motor_set_pos(0);
         					right_motor_set_speed(-ROTATION_COEFF*VITESSE_ROT_CHEMIN);
         					left_motor_set_speed(ROTATION_COEFF*VITESSE_ROT_CHEMIN);
-        					while((abs(left_motor_get_pos()) <= 600) && (abs(right_motor_get_pos()) <= 600));
+        					while((abs(left_motor_get_pos()) <= 655) && (abs(right_motor_get_pos()) <= 655));
         					speed_correction = 0;
         					set_rgb_led(LED4,0,0,0);
         					set_rgb_led(LED6,0,0,0);
+        					set_led(LED1,0);
 						// mode reste normal, demi tour devant l'obstacle effectué (démo 1)
         					//reset sum_error
         				}

@@ -124,7 +124,6 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 					}
 					else
 						recherche_chemin = LEFT;
-
 				}
 			}
 			return FALSE;
@@ -241,23 +240,11 @@ static THD_FUNCTION(Rob_management, arg) {
         			if(distance_mm && (distance_mm < GOAL_DISTANCE)) //si on est dans demo 2 et obstacle détecté on rentre en mode obstacle
         			{
         				if(demo) mode = OBSTACLE;
-        				else // clean avec un mode demi-tour??
+        				else
         				{
-
-        					set_rgb_led(LED4,200,0,0);
-        					set_rgb_led(LED6,200,0,0);
-        					set_led(LED1,1);
         					left_motor_set_pos(0);
         					right_motor_set_pos(0);
-        					right_motor_set_speed(-ROTATION_COEFF*VITESSE_ROT_CHEMIN);
-        					left_motor_set_speed(ROTATION_COEFF*VITESSE_ROT_CHEMIN);
-        					while((abs(left_motor_get_pos()) <= 655) && (abs(right_motor_get_pos()) <= 655));
-        					speed_correction = 0;
-        					set_rgb_led(LED4,0,0,0);
-        					set_rgb_led(LED6,0,0,0);
-        					set_led(LED1,0);
-						// mode reste normal, demi tour devant l'obstacle effectué (démo 1)
-        					//reset sum_error
+        					mode = DEMI_TOUR;// clean avec un mode demi-tour??
         				}
         			}
         			else if(intersection)
@@ -268,6 +255,25 @@ static THD_FUNCTION(Rob_management, arg) {
         				right_motor_set_pos(0);
         			}
         			break;
+
+        		case DEMI_TOUR:
+    				// mode reste normal, demi tour devant l'obstacle effectué (démo 1)
+        			//statements
+					set_rgb_led(LED4,200,0,0);
+					set_rgb_led(LED6,200,0,0);
+
+					speed = 0;
+					speed_correction = VITESSE_ROT_CHEMIN;
+
+					if((abs(left_motor_get_pos()) >= 620) && (abs(right_motor_get_pos()) >= 620))
+					{
+						set_rgb_led(LED4,0,0,0);
+						set_rgb_led(LED6,0,0,0);
+						mode = NORMAL;
+						speed_correction = 0;
+					}
+					break;
+
 
         		case OBSTACLE:
         			//statements
@@ -284,7 +290,7 @@ static THD_FUNCTION(Rob_management, arg) {
 
         		case ATTAQUE:
         			//statements
-        			speed_correction = 0; // pas sure de ça, pas ouf si le robot s'est d�cal�, essai avec une correcton?
+        			//speed_correction = 0; // pas sure de ça, pas ouf si le robot s'est d�cal�, essai avec une correcton?
         			set_led(LED5,0);
         			speed = MOTOR_SPEED_LIMIT;
         			if(distance_mm >= 110)

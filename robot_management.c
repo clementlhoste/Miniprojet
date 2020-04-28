@@ -10,8 +10,9 @@
 #include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
 #include "../lib/e-puck2_main-processor/src/leds.h"
 #include "../lib/e-puck2_main-processor/src/epuck1x/utility/utility.h"
+#include "../lib/e-puck2_main-processor/src/selector.h"
 
-static _Bool demo = DEMO2;
+static _Bool demo = DEMO1;
 
 #define temp_pause 18300000
 
@@ -20,6 +21,9 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 
 	int16_t error = 0;
 	int16_t speed = 0;
+
+    if((get_selector()%2) == DEMO1) demo = DEMO1;
+    if((get_selector()%2) == DEMO2) demo = DEMO2;
 
 	static int sum_error = 0;
 	static int16_t error_pre = 0;

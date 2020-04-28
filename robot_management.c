@@ -242,14 +242,14 @@ static THD_FUNCTION(Rob_management, arg) {
         				{
         					left_motor_set_pos(0);
         					right_motor_set_pos(0);
-        					pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
+        					pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
         					mode = DEMI_TOUR;
         				}
         			}
         			else if(intersection)
         			{
         				mode = INTERSECTION;
-        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
+        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
         				left_motor_set_pos(0);
         				right_motor_set_pos(0);
         			}
@@ -257,7 +257,7 @@ static THD_FUNCTION(Rob_management, arg) {
         			{
         				left_motor_set_pos(0);
         				right_motor_set_pos(0);
-        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
+        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
         				mode = DEMI_TOUR;
         			}
         			break;
@@ -289,11 +289,14 @@ static THD_FUNCTION(Rob_management, arg) {
         		case OBSTACLE:
         			//statements
         			set_led(LED5,1);
-        			speed_correction = 0; // bloquer la rotation
+        			//speed_correction = 0; // bloquer la rotation
+        			//test obstacle avec PID
+        			speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0);
         			speed = VITESSE_RECUL;
         			if(distance_mm >= DISTANCE_CHARGE)
         			{
         				speed = 0;
+        				speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
         				if(condition_degommage) mode = ATTAQUE;
         			}
 
@@ -303,10 +306,12 @@ static THD_FUNCTION(Rob_management, arg) {
         			//statements
         			//speed_correction = 0; // pas sure de ça, pas ouf si le robot s'est d�cal�, essai avec une correcton?
         			set_led(LED5,0);
+        			//attenuer pour avoir une vitesse correcte
+    				speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0); //2.75*
         			speed = MOTOR_SPEED_LIMIT;
         			if(distance_mm >= 110)
         			{
-        				speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0);
+
         				mode = NORMAL;
         			}
 

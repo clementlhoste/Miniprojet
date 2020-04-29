@@ -32,8 +32,8 @@ extern "C" {
 #define KPO						200.0f	// Parameters for the obstacle management PID
 #define KIO 					1.6f  	// must not be zero
 #define KPL						0.5f  	// Parameters for line alignment PID --> A REESSAYER
-#define KIL 				    0.001f//0.015f
-#define KDL 				    1.0f//2.0f
+#define KIL 				    0.0018f//0.002f0.015f
+#define KDL 				    4.0f//2.0f
 //0.00075f
 //0.00043
 #define MAX_SUM_ERROR_O			(MOTOR_SPEED_LIMIT/KIO)

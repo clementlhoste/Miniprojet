@@ -18,6 +18,7 @@ extern "C" {
 
 #define SPEED_DE_CROISIERE		400 		// vitesse de déplacement lorsque mode normal
 #define VITESSE_RECUL			-500		// vitesse de déplacement lorsque obstacle détecté
+#define VITESSE_CHARGE			1000		//vitesse de d�placement apr�s avoir recul�
 #define GOAL_DISTANCE 			40.0f	// Distance de détection de l'obstacle
 #define MAX_DISTANCE 			25.0f
 #define DISTANCE_CHARGE			100 		// distance de recul du robot avant de dégommer l'obstacle (démo 2)

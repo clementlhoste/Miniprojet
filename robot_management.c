@@ -295,12 +295,13 @@ static THD_FUNCTION(Rob_management, arg) {
         			set_led(LED5,1);
         			//speed_correction = 0; // bloquer la rotation
         			//test obstacle avec PID
-        			speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0);
-        			speed = VITESSE_RECUL;
+        			speed_correction = 0;
+        			speed = -SPEED_DE_CROISIERE;
         			if(distance_mm >= DISTANCE_CHARGE)
         			{
         				speed = 0;
-        				speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
+        				speed_correction = 0;
+        						//pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
         				if(condition_degommage) mode = ATTAQUE;
         			}
 
@@ -310,9 +311,8 @@ static THD_FUNCTION(Rob_management, arg) {
         			//statements
         			//speed_correction = 0; // pas sure de ça, pas ouf si le robot s'est d�cal�, essai avec une correcton?
         			set_led(LED5,0);
-        			//attenuer pour avoir une vitesse correcte
-    				speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0); //2.75*
-        			speed = MOTOR_SPEED_LIMIT;
+    				speed_correction = 0;
+        			speed = VITESSE_CHARGE;
         			if(distance_mm >= 110)
         			{
 
@@ -358,9 +358,8 @@ static THD_FUNCTION(Rob_management, arg) {
         	}
 
         //applies the speed from the PI regulator and the correction for the rotation
-
-		right_motor_set_speed(speed - ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
-		left_motor_set_speed(speed + ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
+            right_motor_set_speed(speed - ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
+        	left_motor_set_speed(speed + ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
 
         //10Hz soit 100ms d'attente
         chThdSleepUntilWindowed(time, time + MS2ST(10));

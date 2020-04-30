@@ -7,11 +7,9 @@
 #include <motors.h>
 #include <process_image.h>
 #include <robot_management.h>
-#include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
 #include "../lib/e-puck2_main-processor/src/leds.h"
 #include "../lib/e-puck2_main-processor/src/selector.h"
-#include "audio/play_melody.h"
-#include "sensors/proximity.h"
+
 
 static _Bool demo = DEMO1;
 
@@ -218,6 +216,9 @@ static THD_FUNCTION(Rob_management, arg) {
         distance_mm = VL53L0X_get_dist_mm();
         static uint8_t compteur = 0;
 
+        //right left fr fl
+       float ambient_light = (get_ambient_light(2)+get_ambient_light(5)+get_ambient_light(1)+get_ambient_light(6))/4;//magic nb
+
         //IF WE ARE NOT ABLE TO IMPLEMENT A SATISFYING LINE ALIGNMENT PID
         //computes a correction factor to let the robot rotate to be in front of the line
         //speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
@@ -379,9 +380,9 @@ static THD_FUNCTION(Rob_management, arg) {
         		case END:
         			//statements
         			speed=0;
-       				speed_correction = 0;
-   					playMelody(MARIO, ML_SIMPLE_PLAY, NULL);
-   					break;
+       			speed_correction = 0;
+   				playMelody(MARIO, ML_SIMPLE_PLAY, NULL);
+   				break;
 
         		default:
         			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR");

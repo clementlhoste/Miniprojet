@@ -8,16 +8,16 @@
 #include "memory_protection.h"
 #include <usbcfg.h>
 #include <main.h>
-#include <motors.h>
 #include <camera/po8030.h>
 #include <chprintf.h>
 #include <spi_comm.h>
 
 #include <process_image.h>
 #include <robot_management.h>
-#include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
-#include "audio/play_melody.h"
-#include "sensors/proximity.h"
+
+messagebus_t bus;
+MUTEX_DECL(bus_lock);
+CONDVAR_DECL(bus_condvar);
 
 void SendUint8ToComputer(uint8_t* data, uint16_t size) 
 {
@@ -52,6 +52,8 @@ int main(void)
     //starts the camera
     dcmi_start();
 	po8030_start();
+
+	messagebus_init(&bus, &bus_lock, &bus_condvar);
 
 	//inits the motors
 	motors_init();

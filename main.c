@@ -16,6 +16,8 @@
 #include <process_image.h>
 #include <robot_management.h>
 #include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
+#include "audio/play_melody.h"
+#include "sensors/proximity.h"
 
 void SendUint8ToComputer(uint8_t* data, uint16_t size) 
 {
@@ -58,6 +60,13 @@ int main(void)
 
 	//starts the ToF Thread
 	VL53L0X_start();
+
+	//start the proximity sensors
+	proximity_start();
+	calibrate_ir();
+
+	//starts the Melody Thread
+	playMelodyStart();
 
 	//starts the threads for the pi regulator and the processing of the image
 	process_image_start();

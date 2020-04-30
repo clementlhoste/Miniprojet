@@ -9,8 +9,9 @@
 #include <robot_management.h>
 #include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
 #include "../lib/e-puck2_main-processor/src/leds.h"
-#include "../lib/e-puck2_main-processor/src/epuck1x/utility/utility.h"
 #include "../lib/e-puck2_main-processor/src/selector.h"
+#include "audio/play_melody.h"
+#include "sensors/proximity.h"
 
 static _Bool demo = DEMO1;
 
@@ -92,7 +93,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
-					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					if(get_std_dev() > 19)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 					{		//abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<100
 						return TRUE; //chemin sélectionné
 					}
@@ -121,7 +122,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 					compteur = 0;
 					set_rgb_led(LED2,0,0,0);
 					set_rgb_led(LED8,0,0,0);
-					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					if(get_std_dev() > 19)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 					{
 						recherche_chemin = RIGHT;
 						return TRUE; //chemin sélectionné
@@ -143,7 +144,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
-					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					if(get_std_dev() > 19)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 					{
 						recherche_chemin = RIGHT; //reinitialise pour prochain
 						set_led(LED7,0);
@@ -181,6 +182,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			}
 			return FALSE;
 			break;
+
 
 		default:
 			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR");
@@ -256,6 +258,10 @@ static THD_FUNCTION(Rob_management, arg) {
         					pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
         					mode = DEMI_TOUR;
         				}
+        			}
+        			else if () //proxi
+        			{
+        				mode = END;
         			}
         			else if(intersection)
         			{
@@ -369,6 +375,13 @@ static THD_FUNCTION(Rob_management, arg) {
         				speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
         			}
         			break;
+
+        		case END:
+        			//statements
+        			speed=0;
+       				speed_correction = 0;
+   					playMelody(MARIO, ML_SIMPLE_PLAY, NULL);
+   					break;
 
         		default:
         			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR");

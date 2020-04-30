@@ -220,9 +220,15 @@ static THD_FUNCTION(Rob_management, arg) {
         //computes a correction factor to let the robot rotate to be in front of the line
         //speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
         float std_dev = get_std_dev();
-        _Bool intersection = (std_dev <= 10.5);
-        _Bool blanc = ((std_dev > 10.5)&&(std_dev < 15));
+        _Bool intersection = (std_dev <= 10.75);
+        _Bool blanc = ((std_dev > 10.75)&&(std_dev < 15));
 
+        //if(blanc)
+        	//chprintf((BaseSequentialStream *)&SDU1, "BLANC: std dev: %f", std_dev);
+        //else if(intersection)
+        	//chprintf((BaseSequentialStream *)&SDU1, "INT: std dev: %f", std_dev);
+        //else
+        	//chprintf((BaseSequentialStream *)&SDU1, "INT: std dev: %f", std_dev);
         //mode change
         switch(mode)
         {
@@ -241,6 +247,7 @@ static THD_FUNCTION(Rob_management, arg) {
         			//si distance est initialise (different de 0)
         			if(distance_mm && (distance_mm < GOAL_DISTANCE)) //si on est dans demo 2 et obstacle détecté on rentre en mode obstacle
         			{
+        				compteur = 0;
         				if(demo) mode = OBSTACLE;
         				else
         				{
@@ -252,6 +259,7 @@ static THD_FUNCTION(Rob_management, arg) {
         			}
         			else if(intersection)
         			{
+        				compteur = 0;
         				mode = INTERSECTION;
         				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
         				left_motor_set_pos(0);
@@ -259,10 +267,17 @@ static THD_FUNCTION(Rob_management, arg) {
         			}
         			else if(blanc)
         			{
-        				left_motor_set_pos(0);
-        				right_motor_set_pos(0);
-        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
-        				mode = DEMI_TOUR;
+        				speed = 0;
+        				speed_correction = 0;
+        				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
+        				{
+        					compteur = 0;
+       						left_motor_set_pos(0);
+        					right_motor_set_pos(0);
+        					pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
+        					mode = DEMI_TOUR;
+        				}
+
         			}
         			break;
 
@@ -301,6 +316,8 @@ static THD_FUNCTION(Rob_management, arg) {
         			{
         				speed = 0;
         				speed_correction = 0;
+        				left_motor_set_pos(0);
+        				right_motor_set_pos(0);
         						//pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
         				if(condition_degommage) mode = ATTAQUE;
         			}
@@ -313,7 +330,7 @@ static THD_FUNCTION(Rob_management, arg) {
         			set_led(LED5,0);
     				speed_correction = 0;
         			speed = VITESSE_CHARGE;
-        			if(distance_mm >= 110)
+        			if(distance_mm >= 110 && left_motor_get_pos()>= 11*CONV_CM2STEP && right_motor_get_pos()>= 11*CONV_CM2STEP)
         			{
 
         				mode = NORMAL;

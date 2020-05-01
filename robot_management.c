@@ -78,7 +78,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 		case RIGHT:
 			*vitesse_rotation = VITESSE_ROT_CHEMIN;
 			set_led(LED3,1);
-			if((abs(left_motor_get_pos()) >= 300) && (abs(right_motor_get_pos()) >= 300)) //MAGIC NB
+			if((abs(left_motor_get_pos()) >= 315) && (abs(right_motor_get_pos()) >= 315)) //MAGIC NB
 			{
 				//right_motor_set_speed(0);
 				//left_motor_set_speed(0);
@@ -112,7 +112,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			set_rgb_led(LED2,200,0,0);
 			set_rgb_led(LED8,200,0,0);
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
-			if((abs(left_motor_get_pos()) >= 300) && (abs(right_motor_get_pos()) >= 300)) //MAGIC NB
+			if((abs(left_motor_get_pos()) >= 315) && (abs(right_motor_get_pos()) >= 315)) //MAGIC NB
 			{
 				*vitesse_rotation = 0;
 
@@ -136,7 +136,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 		case LEFT:
 			set_led(LED7,1);
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
-			if((abs(left_motor_get_pos()) >= 600) && (abs(right_motor_get_pos()) >= 600)) //MAGIC NB
+			if((abs(left_motor_get_pos()) >= 630) && (abs(right_motor_get_pos()) >= 630)) //MAGIC NB
 			{
 				*vitesse_rotation = 0;
 
@@ -159,7 +159,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 		case BACK:
 			set_led(LED5,1);
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
-			if((abs(left_motor_get_pos()) >= 900) && (abs(right_motor_get_pos()) >= 900)) //MAGIC NB
+			if((abs(left_motor_get_pos()) >= 980) && (abs(right_motor_get_pos()) >= 980)) //MAGIC NB
 			{
 				set_led(LED5,0);
 
@@ -220,8 +220,8 @@ static THD_FUNCTION(Rob_management, arg) {
         //computes a correction factor to let the robot rotate to be in front of the line
         //speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
         float std_dev = get_std_dev();
-        _Bool intersection = (std_dev <= 10.75);
-        _Bool blanc = ((std_dev > 10.75)&&(std_dev < 15));
+        _Bool intersection = (std_dev <= 10.5);
+        _Bool blanc = ((std_dev > 10.5)&&(std_dev < 15));
 
         //if(blanc)
         	//chprintf((BaseSequentialStream *)&SDU1, "BLANC: std dev: %f", std_dev);

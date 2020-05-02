@@ -8,7 +8,10 @@ extern "C" {
 #include "camera/dcmi_camera.h"
 #include "msgbus/messagebus.h"
 #include "parameter/parameter.h"
-
+#include "sensors/proximity.h"
+#include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
+#include <motors.h>
+#include "msgbus/messagebus.h"
 
 //constants for the differents parts of the project
 #define IMAGE_BUFFER_SIZE		640
@@ -18,7 +21,7 @@ extern "C" {
 
 #define SPEED_DE_CROISIERE		365 		// vitesse de déplacement lorsque mode normal
 #define VITESSE_RECUL			-500		// vitesse de déplacement lorsque obstacle détecté
-#define VITESSE_CHARGE			1000		//vitesse de d�placement apr�s avoir recul�
+#define VITESSE_CHARGE			1000		//vitesse de d�placement apr�s avoir recul�
 #define GOAL_DISTANCE 			40.0f	// Distance de détection de l'obstacle
 #define MAX_DISTANCE 			25.0f
 #define DISTANCE_CHARGE			100 		// distance de recul du robot avant de dégommer l'obstacle (démo 2)

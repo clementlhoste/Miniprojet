@@ -7,10 +7,9 @@
 #include <motors.h>
 #include <process_image.h>
 #include <robot_management.h>
-#include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
 #include "../lib/e-puck2_main-processor/src/leds.h"
-#include "../lib/e-puck2_main-processor/src/epuck1x/utility/utility.h"
 #include "../lib/e-puck2_main-processor/src/selector.h"
+
 
 static _Bool demo = DEMO1;
 
@@ -92,7 +91,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
-					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					if(get_std_dev() > 19)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 					{		//abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<100
 						return TRUE; //chemin sélectionné
 					}
@@ -121,7 +120,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 					compteur = 0;
 					set_rgb_led(LED2,0,0,0);
 					set_rgb_led(LED8,0,0,0);
-					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					if(get_std_dev() > 19)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 					{
 						recherche_chemin = RIGHT;
 						return TRUE; //chemin sélectionné
@@ -143,7 +142,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
-					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					if(get_std_dev() > 19)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 					{
 						recherche_chemin = RIGHT; //reinitialise pour prochain
 						set_led(LED7,0);
@@ -182,6 +181,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			return FALSE;
 			break;
 
+
 		default:
 			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR");
 			return FALSE;
@@ -217,6 +217,11 @@ static THD_FUNCTION(Rob_management, arg) {
         static uint8_t compteur_int = 0;
         static uint8_t compteur_bl  = 0;
         static uint8_t compteur_dt  = 0;
+
+        //right left fr fl
+       float ambient_light = (get_ambient_light(2)+get_ambient_light(5)+get_ambient_light(1)+get_ambient_light(6))/4;//magic nb
+       //chprintf((BaseSequentialStream *)&SDU1, "amb light: %f", ambient_light);
+
 
         //IF WE ARE NOT ABLE TO IMPLEMENT A SATISFYING LINE ALIGNMENT PID
         //computes a correction factor to let the robot rotate to be in front of the line
@@ -259,6 +264,12 @@ static THD_FUNCTION(Rob_management, arg) {
         					pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
         					mode = DEMI_TOUR;
         				}
+        			}
+        			else if (ambient_light > 3300) //proxi
+        			{
+        				left_motor_set_pos(0);
+        				right_motor_set_pos(0);
+        				mode = END;
         			}
         			else if(intersection)
         			{
@@ -379,6 +390,19 @@ static THD_FUNCTION(Rob_management, arg) {
         				speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
         			}
         			break;
+
+        		case END:
+        			//statements
+        			speed = SPEED_DE_CROISIERE;
+        			speed_correction = 0;
+        			if(left_motor_get_pos()>= (350*1.5) && right_motor_get_pos()>= (350*1.5)) // 1.5*CONV_CM2STEP MAGIC NB
+        			{
+              				speed=0;
+        			 }
+        			if(ambient_light < 3300)
+        				mode = NORMAL;
+   				//playMelody(MARIO, ML_SIMPLE_PLAY, NULL);
+   				break;
 
         		default:
         			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR");

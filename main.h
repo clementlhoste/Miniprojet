@@ -16,7 +16,7 @@ extern "C" {
 #define MIN_LINE_WIDTH			40
 #define PXTOCM					1570.0f // Experimental value used for the conversion of pixel data to cm
 
-#define SPEED_DE_CROISIERE		350 		// vitesse de déplacement lorsque mode normal
+#define SPEED_DE_CROISIERE		365 		// vitesse de déplacement lorsque mode normal
 #define VITESSE_RECUL			-500		// vitesse de déplacement lorsque obstacle détecté
 #define VITESSE_CHARGE			1000		//vitesse de d�placement apr�s avoir recul�
 #define GOAL_DISTANCE 			40.0f	// Distance de détection de l'obstacle
@@ -32,12 +32,12 @@ extern "C" {
 #define KPO						200.0f	// Parameters for the obstacle management PID
 #define KIO 					1.6f  	// must not be zero
 #define KPL						0.5f  	// Parameters for line alignment PID --> A REESSAYER
-#define KIL 				    0.0023f//0.002f0.015f
+#define KIL 				    0.0018f//0.002f0.015f
 #define KDL 				    4.0f//2.0f
 //0.00075f
 //0.00043
 #define MAX_SUM_ERROR_O			(MOTOR_SPEED_LIMIT/KIO)
-#define MAX_SUM_ERROR_L			100/KIL
+#define MAX_SUM_ERROR_L			200/KIL
 //((MOTOR_SPEED_LIMIT-SPEED_DE_CROISIERE)/KIL)
 
 

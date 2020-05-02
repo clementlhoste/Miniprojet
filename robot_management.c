@@ -214,14 +214,16 @@ static THD_FUNCTION(Rob_management, arg) {
         //distance_mm gives the distance of the detected obstacle from the robot thanks to the TOF
         uint16_t distance_mm;
         distance_mm = VL53L0X_get_dist_mm();
-        static uint8_t compteur = 0;
+        static uint8_t compteur_int = 0;
+        static uint8_t compteur_bl  = 0;
+        static uint8_t compteur_dt  = 0;
 
         //IF WE ARE NOT ABLE TO IMPLEMENT A SATISFYING LINE ALIGNMENT PID
         //computes a correction factor to let the robot rotate to be in front of the line
         //speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
         float std_dev = get_std_dev();
-        _Bool intersection = (std_dev <= 10.5);
-        _Bool blanc = ((std_dev > 10.5)&&(std_dev < 15));
+        _Bool intersection = (std_dev <= 10.7);
+        _Bool blanc = ((std_dev > 10.7)&&(std_dev < 15));
 
         //if(blanc)
         	//chprintf((BaseSequentialStream *)&SDU1, "BLANC: std dev: %f", std_dev);
@@ -237,7 +239,7 @@ static THD_FUNCTION(Rob_management, arg) {
         			speed = SPEED_DE_CROISIERE;
         			//set_front_led(1);
         			set_led(LED1,1);
-        			speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0);
+        			speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0); // ne pas l'appeller tout le temps
 
         			//if the line is nearly in front of the camera, don't rotate
         			if(abs(speed_correction) < ROTATION_THRESHOLD || speed == 0){
@@ -247,7 +249,8 @@ static THD_FUNCTION(Rob_management, arg) {
         			//si distance est initialise (different de 0)
         			if(distance_mm && (distance_mm < GOAL_DISTANCE)) //si on est dans demo 2 et obstacle détecté on rentre en mode obstacle
         			{
-        				compteur = 0;
+        				compteur_bl = 0;
+        				compteur_int = 0;
         				if(demo) mode = OBSTACLE;
         				else
         				{
@@ -259,19 +262,26 @@ static THD_FUNCTION(Rob_management, arg) {
         			}
         			else if(intersection)
         			{
-        				compteur = 0;
-        				mode = INTERSECTION;
-        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
-        				left_motor_set_pos(0);
-        				right_motor_set_pos(0);
+        				speed = 0;
+        				speed_correction = 0;
+        				if(compteur_int++ >= 10)
+        				{
+        					compteur_int = 0;
+        					compteur_bl  = 0;
+        					mode = INTERSECTION;
+        					pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
+        	   				left_motor_set_pos(0);
+              				right_motor_set_pos(0);
+           				}
         			}
         			else if(blanc)
         			{
         				speed = 0;
         				speed_correction = 0;
-        				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
+        				if(compteur_bl++ >= 9) // attente d'avoir plusieurs valeurs de std
         				{
-        					compteur = 0;
+        					compteur_bl  = 0;
+        					compteur_int = 0;
        						left_motor_set_pos(0);
         					right_motor_set_pos(0);
         					pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
@@ -290,13 +300,13 @@ static THD_FUNCTION(Rob_management, arg) {
 					speed = 0;
 					speed_correction = VITESSE_ROT_CHEMIN;
 
-					if((abs(left_motor_get_pos()) >= 655) && (abs(right_motor_get_pos()) >= 655))
+					if((abs(left_motor_get_pos()) >= 660) && (abs(right_motor_get_pos()) >= 660))
 					{
 						speed_correction = 0;
 
-						if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
+						if(compteur_dt++ >= 20) // attente d'avoir une nouvelle image et un process
 						{
-							compteur = 0;
+							compteur_dt = 0;
 							set_rgb_led(LED4,0,0,0);
 							set_rgb_led(LED6,0,0,0);
 							mode = NORMAL;

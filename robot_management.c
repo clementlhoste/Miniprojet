@@ -218,6 +218,8 @@ static THD_FUNCTION(Rob_management, arg) {
 
         //right left fr fl
        float ambient_light = (get_ambient_light(2)+get_ambient_light(5)+get_ambient_light(1)+get_ambient_light(6))/4;//magic nb
+       //chprintf((BaseSequentialStream *)&SDU1, "amb light: %f", ambient_light);
+
 
         //IF WE ARE NOT ABLE TO IMPLEMENT A SATISFYING LINE ALIGNMENT PID
         //computes a correction factor to let the robot rotate to be in front of the line
@@ -260,8 +262,10 @@ static THD_FUNCTION(Rob_management, arg) {
         					mode = DEMI_TOUR;
         				}
         			}
-        			else if () //proxi
+        			else if (ambient_light > 3300) //proxi
         			{
+        				left_motor_set_pos(0);
+        				right_motor_set_pos(0);
         				mode = END;
         			}
         			else if(intersection)
@@ -379,9 +383,15 @@ static THD_FUNCTION(Rob_management, arg) {
 
         		case END:
         			//statements
-        			speed=0;
-       			speed_correction = 0;
-   				playMelody(MARIO, ML_SIMPLE_PLAY, NULL);
+        			speed = SPEED_DE_CROISIERE;
+        			speed_correction = 0;
+        			if(left_motor_get_pos()>= (350*1.5) && right_motor_get_pos()>= (350*1.5)) // 1.5*CONV_CM2STEP MAGIC NB
+        			{
+              				speed=0;
+        			 }
+        			if(ambient_light < 3300)
+        				mode = NORMAL;
+   				//playMelody(MARIO, ML_SIMPLE_PLAY, NULL);
    				break;
 
         		default:

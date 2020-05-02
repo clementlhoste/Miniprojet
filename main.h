@@ -9,7 +9,6 @@ extern "C" {
 #include "msgbus/messagebus.h"
 #include "parameter/parameter.h"
 #include "sensors/proximity.h"
-#include "audio/play_melody.h"
 #include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
 #include <motors.h>
 #include "msgbus/messagebus.h"

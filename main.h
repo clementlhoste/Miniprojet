@@ -19,7 +19,7 @@ extern "C" {
 #define MIN_LINE_WIDTH			40
 #define PXTOCM					1570.0f // Experimental value used for the conversion of pixel data to cm
 
-#define SPEED_DE_CROISIERE		365 		// vitesse de déplacement lorsque mode normal
+#define SPEED_DE_CROISIERE		400 		// vitesse de déplacement lorsque mode normal
 #define VITESSE_RECUL			-500		// vitesse de déplacement lorsque obstacle détecté
 #define VITESSE_CHARGE			1000		//vitesse de d�placement apr�s avoir recul�
 #define GOAL_DISTANCE 			40.0f	// Distance de détection de l'obstacle

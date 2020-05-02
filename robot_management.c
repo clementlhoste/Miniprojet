@@ -91,7 +91,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
-					if(get_std_dev() > 19)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 					{		//abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<100
 						return TRUE; //chemin sélectionné
 					}
@@ -120,7 +120,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 					compteur = 0;
 					set_rgb_led(LED2,0,0,0);
 					set_rgb_led(LED8,0,0,0);
-					if(get_std_dev() > 19)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 					{
 						recherche_chemin = RIGHT;
 						return TRUE; //chemin sélectionné
@@ -142,7 +142,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
-					if(get_std_dev() > 19)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
 					{
 						recherche_chemin = RIGHT; //reinitialise pour prochain
 						set_led(LED7,0);
@@ -219,8 +219,8 @@ static THD_FUNCTION(Rob_management, arg) {
         static uint8_t compteur_dt  = 0;
 
         //right left fr fl
-       float ambient_light = (get_ambient_light(2)+get_ambient_light(5)+get_ambient_light(1)+get_ambient_light(6))/4;//magic nb
-       //chprintf((BaseSequentialStream *)&SDU1, "amb light: %f", ambient_light);
+       float ambient_light = (get_ambient_light(2)+get_ambient_light(5)+get_ambient_light(1)+get_ambient_light(6) + get_ambient_light(0) + get_ambient_light(7))/6;//magic nb
+       //chprintf((BaseSequentialStream *)&SDU1, "amb: %f", ambient_light);
 
 
         //IF WE ARE NOT ABLE TO IMPLEMENT A SATISFYING LINE ALIGNMENT PID
@@ -265,7 +265,7 @@ static THD_FUNCTION(Rob_management, arg) {
         					mode = DEMI_TOUR;
         				}
         			}
-        			else if (ambient_light > 3300) //proxi
+        			else if (ambient_light > 3400 && blanc) //proxi
         			{
         				left_motor_set_pos(0);
         				right_motor_set_pos(0);
@@ -289,7 +289,7 @@ static THD_FUNCTION(Rob_management, arg) {
         			{
         				speed = 0;
         				speed_correction = 0;
-        				if(compteur_bl++ >= 9) // attente d'avoir plusieurs valeurs de std
+        				if(compteur_bl++ >= 11) // attente d'avoir plusieurs valeurs de std
         				{
         					compteur_bl  = 0;
         					compteur_int = 0;
@@ -399,7 +399,7 @@ static THD_FUNCTION(Rob_management, arg) {
         			{
               				speed=0;
         			 }
-        			if(ambient_light < 3300)
+        			if(ambient_light < 3500)
         				mode = NORMAL;
    				//playMelody(MARIO, ML_SIMPLE_PLAY, NULL);
    				break;
@@ -407,6 +407,8 @@ static THD_FUNCTION(Rob_management, arg) {
         		default:
         			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR");
         	}
+
+        //gerer_LED (mode) avec un static ancien_mode pour �teindre les anciennes et allumer nouvelles
 
         //applies the speed from the PI regulator and the correction for the rotation
             right_motor_set_speed(speed - ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID

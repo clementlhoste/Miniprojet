@@ -34,14 +34,15 @@ extern "C" {
 #define ERROR_THRESHOLD			5 	// [mm] because of the noise of the TOF
 #define KPO						200.0f	// Parameters for the obstacle management PID
 #define KIO 					1.6f  	// must not be zero
-#define KPL						0.5f  	// Parameters for line alignment PID --> A REESSAYER
-#define KIL 				    0.0018f//0.002f0.015f
-#define KDL 				    4.0f//2.0f
-//0.00075f
-//0.00043
+#define KPL						0.5f  	// Parameters for line alignment PID 
+#define KIL 				    0.0018f //experimental values
+#define KDL 				    4.0f
+
 #define MAX_SUM_ERROR_O			(MOTOR_SPEED_LIMIT/KIO)
-#define MAX_SUM_ERROR_L			200/KIL
-//((MOTOR_SPEED_LIMIT-SPEED_DE_CROISIERE)/KIL)
+#define TERM_I_MAX				200	//maximum integral contribution to PID
+#define MAX_SUM_ERROR_L			TERM_I_MAX/KIL //limit sum error 
+
+#define RGB_INTENSITY 10	
 
 
 /** Robot wide IPC bus. */

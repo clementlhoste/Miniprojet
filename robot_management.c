@@ -10,10 +10,8 @@
 #include "../lib/e-puck2_main-processor/src/leds.h"
 #include "../lib/e-puck2_main-processor/src/selector.h"
 
-
+//utile?
 static _Bool demo = DEMO1;
-
-#define temp_pause 18300000
 
 //simple PI regulator implementation to manage line alignment and obstacles
 int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
@@ -64,6 +62,75 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
     return speed;
 }
 
+
+//state 1 = switch on led, state 0 = switch off 
+void gerer_led(int8_t mode, unsigned int state) //uin8_t ?
+{
+	switch(mode)
+	{
+	  	case NORMAL:
+        //switch the front LED
+        	set_led(LED1, state);
+        	break;		
+
+	    case DEMI_TOUR:
+	    //switch 2 back RGB LED (in RED here)
+			set_rgb_led(LED4,(state * 200),0,0); 
+			set_rgb_led(LED6,(state *200),0,0);
+			break;
+
+	    case OBSTACLE:
+	    //switch back LED
+	     	set_led(LED5, state);
+	       	break;
+
+	    case ATTAQUE:
+	    //toggle RED some RGB LED
+	      	toggle_rgb_led(LED2, RED_LED, RGB_INTENSITY);
+	       	toggle_rgb_led(LED4, RED_LED, RGB_INTENSITY);
+	       	toggle_rgb_led(LED6, RED_LED, RGB_INTENSITY);
+	       	toggle_rgb_led(LED8, RED_LED, RGB_INTENSITY);
+	       	break;
+
+        case INTERSECTION:
+	    //switch 4 RGB LED in blue
+	    //rgb(30,144,255)
+	        set_rgb_led(LED2,(state*30),(state*144),(state*255));
+	        set_rgb_led(LED4,(state*30),(state*144),(state*255));
+        	set_rgb_led(LED6,(state*30),(state*144),(state*255));
+	        set_rgb_led(LED8,(state*30),(state*144),(state*255));
+	        break;
+
+	    case CHOIX_CHEMIN:
+	    //statements
+	    set_led(LED3, state);
+	        break;
+
+	    case END:
+	    //nothing
+	   		break;
+
+	    default:
+	 		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR gestion led");
+	}
+}
+
+//comments
+void mode_led(int8_t mode)
+{
+	static int8_t ancien_mode = NORMAL;
+
+	if(mode != ancien_mode)
+	{
+		//�teindre les anciennes LEDS avec ancien_mode
+		gerer_led(ancien_mode, 0);
+		//allumer les nouvelles avec mode
+		gerer_led(mode, 1);
+
+		ancien_mode = mode;
+	}
+}
+
 _Bool choix_chemin(int16_t* vitesse_rotation)
 {
 
@@ -79,11 +146,6 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			set_led(LED3,1);
 			if((abs(left_motor_get_pos()) >= 315) && (abs(right_motor_get_pos()) >= 315)) //MAGIC NB
 			{
-				//right_motor_set_speed(0);
-				//left_motor_set_speed(0);
-
-				//wait(temp_pause); //semaphore capture image aller et revenir
-				//chThdSleep /Exit/Resume
 
 				//ajouter un compteur
 				*vitesse_rotation = 0;
@@ -188,7 +250,6 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 	}
 }
 
-
 static THD_WORKING_AREA(waRob_management, 256);
 static THD_FUNCTION(Rob_management, arg) {
 
@@ -214,205 +275,171 @@ static THD_FUNCTION(Rob_management, arg) {
         //distance_mm gives the distance of the detected obstacle from the robot thanks to the TOF
         uint16_t distance_mm;
         distance_mm = VL53L0X_get_dist_mm();
+        
+		//plus condens�s?
         static uint8_t compteur_int = 0;
         static uint8_t compteur_bl  = 0;
         static uint8_t compteur_dt  = 0;
 
-        //right left fr fl
        float ambient_light = (get_ambient_light(2)+get_ambient_light(5)+get_ambient_light(1)+get_ambient_light(6) + get_ambient_light(0) + get_ambient_light(7))/6;//magic nb
        //chprintf((BaseSequentialStream *)&SDU1, "amb: %f", ambient_light);
 
-
-        //IF WE ARE NOT ABLE TO IMPLEMENT A SATISFYING LINE ALIGNMENT PID
-        //computes a correction factor to let the robot rotate to be in front of the line
-        //speed_correction = (get_line_position() - (IMAGE_BUFFER_SIZE/2));
+       //toujours besoin de std_dev?
         float std_dev = get_std_dev();
         _Bool intersection = (std_dev <= 10.7);
         _Bool blanc = ((std_dev > 10.7)&&(std_dev < 15));
 
-        //if(blanc)
-        	//chprintf((BaseSequentialStream *)&SDU1, "BLANC: std dev: %f", std_dev);
-        //else if(intersection)
-        	//chprintf((BaseSequentialStream *)&SDU1, "INT: std dev: %f", std_dev);
-        //else
-        	//chprintf((BaseSequentialStream *)&SDU1, "INT: std dev: %f", std_dev);
-        //mode change
         switch(mode)
         {
-        		case NORMAL:
-        			//statements
-        			speed = SPEED_DE_CROISIERE;
-        			//set_front_led(1);
-        			set_led(LED1,1);
-        			speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0); // ne pas l'appeller tout le temps
+        	case NORMAL: //move forward following the line with a PID
+        		 
+        		speed = SPEED_DE_CROISIERE;
+				speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0); // ne pas l'appeller tout le temps
 
-        			//if the line is nearly in front of the camera, don't rotate
-        			if(abs(speed_correction) < ROTATION_THRESHOLD || speed == 0){
-        	         	speed_correction = 0;
-        			}
+        		//if the line is nearly in front of the camera, don't rotate
+        		if(abs(speed_correction) < ROTATION_THRESHOLD || speed == 0){
+        	       	speed_correction = 0;
+        		}
 
-        			//si distance est initialise (different de 0)
-        			if(distance_mm && (distance_mm < GOAL_DISTANCE)) //si on est dans demo 2 et obstacle détecté on rentre en mode obstacle
-        			{
-        				compteur_bl = 0;
-        				compteur_int = 0;
-        				if(demo) mode = OBSTACLE;
-        				else
-        				{
-        					left_motor_set_pos(0);
-        					right_motor_set_pos(0);
-        					pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
-        					mode = DEMI_TOUR;
-        				}
-        			}
-        			else if (ambient_light > 3400 && blanc) //proxi
+        		//si distance est initialise (different de 0)
+        		if(distance_mm && (distance_mm < GOAL_DISTANCE)) //si on est dans demo 2 et obstacle détecté on rentre en mode obstacle
+        		{
+        			compteur_bl = 0;
+        			compteur_int = 0;
+        			if(demo) mode = OBSTACLE;
+        			else
         			{
         				left_motor_set_pos(0);
         				right_motor_set_pos(0);
-        				mode = END;
+        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
+        				mode = DEMI_TOUR;
         			}
-        			else if(intersection)
-        			{
-        				speed = 0;
-        				speed_correction = 0;
-        				if(compteur_int++ >= 10)
-        				{
-        					compteur_int = 0;
-        					compteur_bl  = 0;
-        					mode = INTERSECTION;
-        					pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
-        	   				left_motor_set_pos(0);
-              				right_motor_set_pos(0);
-           				}
-        			}
-        			else if(blanc)
-        			{
-        				speed = 0;
-        				speed_correction = 0;
-        				if(compteur_bl++ >= 11) // attente d'avoir plusieurs valeurs de std
-        				{
-        					compteur_bl  = 0;
-        					compteur_int = 0;
-       						left_motor_set_pos(0);
-        					right_motor_set_pos(0);
-        					pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
-        					mode = DEMI_TOUR;
-        				}
-
-        			}
-        			break;
-
-        		case DEMI_TOUR:
-    				// mode reste normal, demi tour devant l'obstacle effectué (démo 1)
-        			//statements
-					set_rgb_led(LED4,200,0,0);
-					set_rgb_led(LED6,200,0,0);
-
-					speed = 0;
-					speed_correction = VITESSE_ROT_CHEMIN;
-
-					if((abs(left_motor_get_pos()) >= 660) && (abs(right_motor_get_pos()) >= 660))
-					{
-						speed_correction = 0;
-
-						if(compteur_dt++ >= 20) // attente d'avoir une nouvelle image et un process
-						{
-							compteur_dt = 0;
-							set_rgb_led(LED4,0,0,0);
-							set_rgb_led(LED6,0,0,0);
-							mode = NORMAL;
-						}
-					}
-					break;
-
-
-        		case OBSTACLE:
-        			//statements
-        			set_led(LED5,1);
-        			//speed_correction = 0; // bloquer la rotation
-        			//test obstacle avec PID
-        			speed_correction = 0;
-        			speed = -SPEED_DE_CROISIERE;
-        			if(distance_mm >= DISTANCE_CHARGE)
-        			{
-        				speed = 0;
-        				speed_correction = 0;
-        				left_motor_set_pos(0);
-        				right_motor_set_pos(0);
-        						//pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
-        				if(condition_degommage) mode = ATTAQUE;
-        			}
-
-        			break;
-
-        		case ATTAQUE:
-        			//statements
-        			//speed_correction = 0; // pas sure de ça, pas ouf si le robot s'est d�cal�, essai avec une correcton?
-        			set_led(LED5,0);
-    				speed_correction = 0;
-        			speed = VITESSE_CHARGE;
-        			if(distance_mm >= 110 && left_motor_get_pos()>= 11*CONV_CM2STEP && right_motor_get_pos()>= 11*CONV_CM2STEP)
-        			{
-
-        				mode = NORMAL;
-        			}
-
-        			break;
-
-        		case INTERSECTION:
-        			//statements
-        			speed_correction = 0;
-        			speed = VITESSE_APPROCHE_INT;
-        			set_led(LED1,0);
-        			set_rgb_led(LED2,200,200,0);
-        			set_rgb_led(LED4,200,200,0);
-        			set_rgb_led(LED6,200,200,0);
-        			set_rgb_led(LED8,200,200,0);
-        			if(left_motor_get_pos()>= 350 && right_motor_get_pos()>= 350) // 1.5*CONV_CM2STEP MAGIC NB
-        			{
-        				speed=0;
-        				left_motor_set_pos(0);
-        				right_motor_set_pos(0);
-        				mode = CHOIX_CHEMIN;
-        			}
-        			break;
-
-        		case CHOIX_CHEMIN:
-        			//statements
+        		}
+        		else if (ambient_light > 3400 && blanc) //proxi
+        		{
+        			left_motor_set_pos(0);
+        			right_motor_set_pos(0);
+        			mode = END;
+        		}
+        		else if(intersection)
+        		{
         			speed = 0;
-        			set_rgb_led(LED2,0,0,0);
-        			set_rgb_led(LED4,0,0,0);
-        			set_rgb_led(LED6,0,0,0);
-        			set_rgb_led(LED8,0,0,0);
-        			if(choix_chemin(&speed_correction))
-        			{
-        				mode = NORMAL;
-        				speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
-        			}
-        			break;
-
-        		case END:
-        			//statements
-        			speed = SPEED_DE_CROISIERE;
         			speed_correction = 0;
-        			if(left_motor_get_pos()>= (350*1.5) && right_motor_get_pos()>= (350*1.5)) // 1.5*CONV_CM2STEP MAGIC NB
+        			if(compteur_int++ >= 10)
         			{
-              				speed=0;
-        			 }
-        			if(ambient_light < 3500)
-        				mode = NORMAL;
-   				//playMelody(MARIO, ML_SIMPLE_PLAY, NULL);
+        				compteur_int = 0;
+        				compteur_bl  = 0;
+        				mode = INTERSECTION;
+        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
+        	   			left_motor_set_pos(0);
+              			right_motor_set_pos(0);
+           			}
+        		}
+        		else if(blanc)
+        		{
+        			speed = 0;
+        			speed_correction = 0;
+        			if(compteur_bl++ >= 11) // attente d'avoir plusieurs valeurs de std
+        			{
+        				compteur_bl  = 0;
+        				compteur_int = 0;
+       					left_motor_set_pos(0);
+        				right_motor_set_pos(0);
+        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
+        				mode = DEMI_TOUR;
+        			}
+
+        		}
+        		break;
+
+        	case DEMI_TOUR: //performs a U-turn
+
+				speed = 0;
+				speed_correction = VITESSE_ROT_CHEMIN;
+
+				if((abs(left_motor_get_pos()) >= 660) && (abs(right_motor_get_pos()) >= 660))
+				{
+					speed_correction = 0;
+
+					if(compteur_dt++ >= 20) // attente d'avoir une nouvelle image et un process
+					{
+						compteur_dt = 0;
+						mode = NORMAL;
+					}
+				}
+				break;
+
+
+        	case OBSTACLE: //deal with the presence of an obstacle
+
+        		speed = -SPEED_DE_CROISIERE;
+        		speed_correction = 0;
+        		if(distance_mm >= DISTANCE_CHARGE)
+        		{
+        			speed = 0;
+        			speed_correction = 0;
+        			left_motor_set_pos(0);
+        			right_motor_set_pos(0);
+        			pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
+        			if(condition_degommage) mode = ATTAQUE;
+        		}
+        		break;
+
+        	case ATTAQUE: //increase the speed to kick a door
+
+    			speed_correction = 0;
+        		speed = VITESSE_CHARGE;
+        		if(distance_mm >= 110 && left_motor_get_pos()>= 11*CONV_CM2STEP && right_motor_get_pos()>= 11*CONV_CM2STEP)
+        		{
+
+        			mode = NORMAL;
+        		}
+        		break;
+
+        	case INTERSECTION: //detects a black square which represents future crossroads
+
+        		speed = VITESSE_APPROCHE_INT;
+        		speed_correction = 0;
+        		if(left_motor_get_pos()>= 350 && right_motor_get_pos()>= 350) // 1.5*CONV_CM2STEP MAGIC NB
+        		{
+        			speed=0;
+        			left_motor_set_pos(0);
+        			right_motor_set_pos(0);
+        			mode = CHOIX_CHEMIN;
+        		}
+        		break;
+
+        	case CHOIX_CHEMIN: //choose a correct path beetween 4 possible path in the priority: right, front, left, back
+
+        		speed = 0;
+        		if(choix_chemin(&speed_correction))
+        		{
+        			mode = NORMAL;
+        			speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
+        		}
+        		break;
+
+        	case END: //detects the end of the demo, has entered his house!
+
+        		speed = SPEED_DE_CROISIERE;
+        		speed_correction = 0;
+        		if(left_motor_get_pos()>= (350*1.5) && right_motor_get_pos()>= (350*1.5)) // 1.5*CONV_CM2STEP MAGIC NB
+        		{
+              		speed=0;
+        		}
+        		if(ambient_light < 3500) mode = NORMAL;
    				break;
 
-        		default:
-        			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR");
-        	}
+        	default:
+        		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR");
+        }
 
-        //gerer_LED (mode) avec un static ancien_mode pour �teindre les anciennes et allumer nouvelles
+        //change the states of the led, switch off previous mode LED and switch on new one 
+       	mode_led(mode);
 
         //applies the speed from the PI regulator and the correction for the rotation
-            right_motor_set_speed(speed - ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
-        	left_motor_set_speed(speed + ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
+        right_motor_set_speed(speed - ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
+        left_motor_set_speed(speed + ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
 
         //10Hz soit 100ms d'attente
         chThdSleepUntilWindowed(time, time + MS2ST(10));

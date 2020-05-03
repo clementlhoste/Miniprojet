@@ -85,16 +85,17 @@ void gerer_led(int8_t mode, unsigned int state) //uin8_t ?
 	       	break;
 
 	    case ATTAQUE:
-	    //toggle RED some RGB LED
-	      	toggle_rgb_led(LED2, RED_LED, RGB_INTENSITY);
-	       	toggle_rgb_led(LED4, RED_LED, RGB_INTENSITY);
-	       	toggle_rgb_led(LED6, RED_LED, RGB_INTENSITY);
-	       	toggle_rgb_led(LED8, RED_LED, RGB_INTENSITY);
+	    //switch 4 RGB LED in orange
+	    //rgb(255,165,0)
+	      	set_rgb_led(LED2,(state*255),(state*165),0);
+	        set_rgb_led(LED4,(state*255),(state*165),0);
+        	set_rgb_led(LED6,(state*255),(state*165),0);
+	        set_rgb_led(LED8,(state*255),(state*165),0);
 	       	break;
 
         case INTERSECTION:
 	    //switch 4 RGB LED in blue
-	    //rgb(30,144,255)
+	    //rgb(30,144,255), magic numbers
 	        set_rgb_led(LED2,(state*30),(state*144),(state*255));
 	        set_rgb_led(LED4,(state*30),(state*144),(state*255));
         	set_rgb_led(LED6,(state*30),(state*144),(state*255));
@@ -102,9 +103,9 @@ void gerer_led(int8_t mode, unsigned int state) //uin8_t ?
 	        break;
 
 	    case CHOIX_CHEMIN:
-	    //statements
-	    set_led(LED3, state);
-	        break;
+	    //only possible to switch off this light, on is in gerer_led_inter
+	    	set_led(LED3, 0);
+	   		break;
 
 	    case END:
 	    //nothing
@@ -124,54 +125,98 @@ void mode_led(int8_t mode)
 	{
 		//�teindre les anciennes LEDS avec ancien_mode
 		gerer_led(ancien_mode, 0);
-		//allumer les nouvelles avec mode
-		gerer_led(mode, 1);
-
+		
+		if(mode != CHOIX_CHEMIN) //cas dans gerer_led_inter()
+		{	
+			//allumer les nouvelles avec mode
+			gerer_led(mode, 1);
+		}
 		ancien_mode = mode;
 	}
+}
+
+void gerer_led_inter(int8_t dir, unsigned int state)
+{
+	switch(dir)
+	{
+	  	case RIGHT:
+        //switch the front LED
+        	set_led(LED3, state);
+        	break;		
+
+	    case FRONT:
+	    //switch 2 front RGB LED (in RED here)
+			set_rgb_led(LED2,(state*200),0,0);
+			set_rgb_led(LED8,(state*200),0,0);
+			break;
+
+	    case LEFT:
+	    //switch left LED
+	     	set_led(LED7,state);
+	       	break;
+
+	    case BACK:
+	    //switch back LED
+	   		set_led(LED5,state);
+	       	break;
+
+	    default:
+	 		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR gest led inter");
+	}
+
+}
+
+
+void mode_inter_led(int8_t dir)
+{
+	static uint8_t ancienne_dir = RIGHT;
+
+	if(dir != ancienne_dir)
+	{
+		//�teindre les anciennes LEDS avec ancienne_dir
+		gerer_led_inter(ancienne_dir, 0);
+		//allumer les nouvelles avec mode
+		gerer_led_inter(dir, 1);
+	}
+	ancienne_dir = dir;
 }
 
 _Bool choix_chemin(int16_t* vitesse_rotation)
 {
 
 	static int8_t recherche_chemin = RIGHT;
+	_Bool chemin_trouve = FALSE;
 	static uint8_t compteur = 0;
 
 	switch(recherche_chemin)
 	{
-		//Dans un premier temps vérifie s'il ya un chemin à droite de l'intersection, si oui y va
-		//300 correspond à (PERIMETER_EPUCK*CONV_CM2STEP/4+1) et considérations empiriques pour bien touner à 90°
-		case RIGHT:
+		case RIGHT: //Dans un premier temps vérifie s'il ya un chemin à droite de l'intersection, si oui y va
+
 			*vitesse_rotation = VITESSE_ROT_CHEMIN;
-			set_led(LED3,1);
+
+			//300 correspond à (PERIMETER_EPUCK*CONV_CM2STEP/4+1) et considérations empiriques pour bien touner à 90°
 			if((abs(left_motor_get_pos()) >= 315) && (abs(right_motor_get_pos()) >= 315)) //MAGIC NB
 			{
-
-				//ajouter un compteur
 				*vitesse_rotation = 0;
-
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
-					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
-					{		//abs(get_line_position()-IMAGE_BUFFER_SIZE/2)<100
-						return TRUE; //chemin sélectionné
+					if(get_std_dev() > 18) //MAGIC NB
+					{		
+						chemin_trouve = TRUE; //path selected
 					}
 					else
 					{
 						recherche_chemin = FRONT;
-						set_led(LED3,0);
 						left_motor_set_pos(0);
 						right_motor_set_pos(0);
 					}
 				}
 			}
-			return FALSE;
 			break;
 
 		case FRONT:
-			set_rgb_led(LED2,200,0,0);
-			set_rgb_led(LED8,200,0,0);
+
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
 			if((abs(left_motor_get_pos()) >= 315) && (abs(right_motor_get_pos()) >= 315)) //MAGIC NB
 			{
@@ -180,22 +225,19 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
-					set_rgb_led(LED2,0,0,0);
-					set_rgb_led(LED8,0,0,0);
-					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					if(get_std_dev() > 18)  //MAGIC NB
 					{
-						recherche_chemin = RIGHT;
-						return TRUE; //chemin sélectionné
+						recherche_chemin = RIGHT; //reset for next one
+						chemin_trouve = TRUE; //path selected
 					}
 					else
 						recherche_chemin = LEFT;
 				}
 			}
-			return FALSE;
 			break;
 
 		case LEFT:
-			set_led(LED7,1);
+
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
 			if((abs(left_motor_get_pos()) >= 630) && (abs(right_motor_get_pos()) >= 630)) //MAGIC NB
 			{
@@ -204,50 +246,41 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
-					if(get_std_dev() > 18)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
+					if(get_std_dev() > 18) //MAGIC NB
 					{
-						recherche_chemin = RIGHT; //reinitialise pour prochain
-						set_led(LED7,0);
-						return TRUE; //chemin sélectionné
+						recherche_chemin = RIGHT; //reset for next one
+						chemin_trouve = TRUE; //path selected
 					}
 					else
 						recherche_chemin = BACK;
 				}
 			}
-			return FALSE;
 			break;
 
 		case BACK:
-			set_led(LED5,1);
+
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
 			if((abs(left_motor_get_pos()) >= 980) && (abs(right_motor_get_pos()) >= 980)) //MAGIC NB
 			{
-				set_led(LED5,0);
-
 				*vitesse_rotation = 0;
 
 				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
 				{
 					compteur = 0;
 
-				//on suppose que dans tous les cas il y a une ligne
-				//if(get_std_dev() > 5)  //utiliser line_not_found peut-être si cette contiion marche pas bien  //MAGIC NB
-				//{
-					recherche_chemin = RIGHT;
-					return TRUE; //chemin sélectionné
-				//}
-				//else
-					//recherche_chemin = LEFT;
+					recherche_chemin = RIGHT; //reset for next one
+					chemin_trouve = TRUE; //selected path (by default)
 				}
 			}
-			return FALSE;
 			break;
 
 
 		default:
-			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR");
-			return FALSE;
+			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR choix chemin");
+			chemin_trouve = FALSE;
 	}
+	mode_inter_led(recherche_chemin);
+	return chemin_trouve;
 }
 
 static THD_WORKING_AREA(waRob_management, 256);
@@ -269,6 +302,8 @@ static THD_FUNCTION(Rob_management, arg) {
     static int8_t mode = NORMAL;
     static _Bool condition_degommage = true;
 
+    gerer_led(NORMAL,1); //init les LEDS
+ 
     while(1){
         time = chVTGetSystemTime();
         
@@ -405,6 +440,7 @@ static THD_FUNCTION(Rob_management, arg) {
         			speed=0;
         			left_motor_set_pos(0);
         			right_motor_set_pos(0);
+        			gerer_led_inter(RIGHT, 1); //init LEDs
         			mode = CHOIX_CHEMIN;
         		}
         		break;

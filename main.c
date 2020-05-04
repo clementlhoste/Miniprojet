@@ -16,6 +16,7 @@
 #include <process_image.h>
 #include <robot_management.h>
 #include <audio_processing.h>
+#include <communications.h>
 #include <fft.h>
 #include <arm_math.h>
 
@@ -98,11 +99,6 @@ int main(void)
 
     /* Infinite loop. */
     while (1) {
-		#ifdef SEND_FROM_MIC
-
-    		//waits until a result must be sent to the computer
-    		wait_send_to_computer();
-		#endif
         #ifdef DOUBLE_BUFFERING
     		//we copy the buffer to avoid conflicts
     		arm_copy_f32(get_audio_buffer_ptr(LEFT_OUTPUT), send_tab, FFT_SIZE);

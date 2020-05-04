@@ -11,9 +11,19 @@
 #include <camera/po8030.h>
 #include <chprintf.h>
 #include <spi_comm.h>
+#include <audio/microphone.h>
 
 #include <process_image.h>
 #include <robot_management.h>
+#include <audio_processing.h>
+#include <fft.h>
+#include <arm_math.h>
+
+//uncomment to send the FFTs results from the real microphones
+#define SEND_FROM_MIC
+
+//uncomment to use double buffering to send the FFT to the computer
+#define DOUBLE_BUFFERING
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
@@ -71,10 +81,33 @@ int main(void)
 	process_image_start();
 	rob_management_start();
 
+	//temp tab used to store values in complex_float format
+	//needed bx doFFT_c
+	static complex_float temp_tab[FFT_SIZE];
+	//send_tab is used to save the state of the buffer to send (double buffering)
+	//to avoid modifications of the buffer while sending it
+	static float send_tab[FFT_SIZE];
+
+	#ifdef SEND_FROM_MIC
+	    //starts the microphones processing thread.
+	    //it calls the callback given in parameter when samples are ready
+	    mic_start(&processAudioData);
+	#endif  /* SEND_FROM_MIC */
+
+
+
     /* Infinite loop. */
     while (1) {
-    	//waits 1 second
-        chThdSleepMilliseconds(1000);
+		#ifdef SEND_FROM_MIC
+
+    		//waits until a result must be sent to the computer
+    		wait_send_to_computer();
+		#endif
+        #ifdef DOUBLE_BUFFERING
+    		//we copy the buffer to avoid conflicts
+    		arm_copy_f32(get_audio_buffer_ptr(LEFT_OUTPUT), send_tab, FFT_SIZE);
+    		//SendFloatToComputer((BaseSequentialStream *) &SD3, send_tab, FFT_SIZE);
+		#endif
 
     }
 }

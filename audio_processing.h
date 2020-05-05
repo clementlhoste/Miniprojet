@@ -17,6 +17,15 @@ typedef enum {
 	BACK_OUTPUT
 } BUFFER_NAME_t;
 
+//begin to analyse audio data (FFT + PNN)
+void active_audio_processing(void);
+
+//stop to analyse audio data (FFT + PNN)
+void desactive_audio_processing(void);
+
+//tell if a go was detected
+_Bool return_vocal_command(void);
+
 
 void processAudioData(int16_t *data, uint16_t num_samples);
 

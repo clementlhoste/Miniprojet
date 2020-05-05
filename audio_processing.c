@@ -4,35 +4,21 @@
 #include <usbcfg.h>
 #include <chprintf.h>
 
-#include <motors.h>
 #include <audio/microphone.h>
 #include <audio_processing.h>
-#include <communications.h>
 #include <fft.h>
 #include <arm_math.h>
 
-//semaphore
-static BSEMAPHORE_DECL(sendToComputer_sem, TRUE);
-
 //2 times FFT_SIZE because these arrays contain complex numbers (real + imaginary)
 static float micLeft_cmplx_input[2 * FFT_SIZE];
-static float micRight_cmplx_input[2 * FFT_SIZE];
-static float micFront_cmplx_input[2 * FFT_SIZE];
-static float micBack_cmplx_input[2 * FFT_SIZE];
+
 //Arrays containing the computed magnitude of the complex numbers
 static float micLeft_output[FFT_SIZE];
-static float micRight_output[FFT_SIZE];
-static float micFront_output[FFT_SIZE];
-static float micBack_output[FFT_SIZE];
+
 
 #define MIN_VALUE_THRESHOLD	10000 
 
-#define MIN_FREQ		10	//we don't analyze before this index to not use resources for nothing
-#define FREQ_FORWARD	16	//250Hz
-#define FREQ_LEFT		19	//296Hz
-#define FREQ_RIGHT		23	//359HZ
-#define FREQ_BACKWARD	26	//406Hz
-
+//list of used frequencies for voice recognition
 #define FREQ1_L			27	//422Hz
 #define FREQ1_H			28	//437Hz
 #define FREQ2			65 	//1016 Hz
@@ -43,58 +29,89 @@ static float micBack_output[FFT_SIZE];
 #define FREQ5_L			201	//3140 Hz
 #define FREQ5_H			202	//3156 Hz
 
-#define MAX_FREQ		30	//we don't analyze after this index to not use resources for nothing
+//PNN parameters
+#define	NB_CLASSES		2
+#define	NB_EXEMPLES		4
+#define NB_FREQ			5
+#define SMOOTHING		0.5f
+#define N1				3
+#define N2				1
+enum{VOID=1,GO};
 
-#define FREQ_FORWARD_L		(FREQ_FORWARD-1)
-#define FREQ_FORWARD_H		(FREQ_FORWARD+1)
-#define FREQ_LEFT_L			(FREQ_LEFT-1)
-#define FREQ_LEFT_H			(FREQ_LEFT+1)
-#define FREQ_RIGHT_L		(FREQ_RIGHT-1)
-#define FREQ_RIGHT_H		(FREQ_RIGHT+1)
-#define FREQ_BACKWARD_L		(FREQ_BACKWARD-1)
-#define FREQ_BACKWARD_H		(FREQ_BACKWARD+1)
+static float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497},
+												{0.025389122,0.022923238,0.008571391,0.01391224,0.011094523},
+												{0.077949966,0.023574965,0.009795453,0.013051499,0.010085111},
+												//{0.056604504,0.033797138,0.007765485,0.014088029,0.01118684}
+												{0.525953696,0.076893209,0.012715966,0.018951827,0.013572355}
+											   };
 
-/*
-*	Simple function used to detect the highest value in a buffer
-*	and to execute a motor command depending on it
-*/
-void sound_remote(float* data){
-	float max_norm = MIN_VALUE_THRESHOLD;
-	int16_t max_norm_index = -1; 
+static _Bool process_active = FALSE;
+static _Bool vocal_command  = FALSE;
 
-	//search for the highest peak
-	for(uint16_t i = MIN_FREQ ; i <= MAX_FREQ ; i++){
-		if(data[i] > max_norm){
-			max_norm = data[i];
-			max_norm_index = i;
+void active_audio_processing(void)
+{
+	process_active = TRUE;
+}
+
+void desactive_audio_processing(void)
+{
+	process_active = FALSE;
+	vocal_command  = FALSE;
+}
+
+_Bool return_vocal_command(void)
+{
+	return vocal_command;
+}
+
+// C is the number of classes, N is the number of examples, Nk are from class k
+// d is the dimensionality of the training examples, sigma is the smoothing factor
+// test_example[d] is the example to be classified
+// Examples[N][d] are the training examples
+int pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d], float examples[N][d])
+{
+	uint8_t classify = -1;
+	float largest = 0;
+	float sum[C];
+	uint8_t Nk = 0;
+
+	// The OUTPUT layer which computes the pdf for each class C
+	for (uint8_t k=1; k<=C; k++)
+	{
+		sum[k] = 0;
+		if(k == VOID)	Nk = N1;
+		if(k == GO)		Nk = N2;
+
+		// The SUMMATION layer which accumulates the pdf
+		// for each example from the particular class k
+		for (uint8_t i=0; i<Nk; i++)
+		{
+			if(k == GO)	i = N1;
+			double product = 0;
+			// The PATTERN layer that multiplies the test example by the weights
+			for (uint8_t j=0; j<d; j++)
+			{
+				product += (examples[i][j] - test_example[j])*(examples[i][j]-test_example[j]);
+			}
+			//chprintf((BaseSequentialStream *) &SDU1, "#1 product (k %d,i %d) = %f \n;",k,i,product);
+			product = (-product) / (2* sigma * sigma);
+			//chprintf((BaseSequentialStream *) &SDU1, "#2 product (k %d,i %d) = %f \n;",k,i,product);
+			product = exp(product);
+			//chprintf((BaseSequentialStream *) &SDU1, "#3 product (k %d,i %d) = %f \n;",k,i,product);
+			sum[k] += product;
+		}
+		sum[k] /= Nk;
+	}
+	for (uint8_t k=1; k<=C; k++)
+	{
+		//chprintf((BaseSequentialStream *) &SDU1, "probab %d: %f \n;",k,sum[k]);
+		if (sum[k] > largest)
+		{
+			largest = sum[k];
+			classify = k;
 		}
 	}
-
-	//go forward
-	if(max_norm_index >= FREQ_FORWARD_L && max_norm_index <= FREQ_FORWARD_H){
-		left_motor_set_speed(600);
-		right_motor_set_speed(600);
-	}
-	//turn left
-	else if(max_norm_index >= FREQ_LEFT_L && max_norm_index <= FREQ_LEFT_H){
-		left_motor_set_speed(-600);
-		right_motor_set_speed(600);
-	}
-	//turn right
-	else if(max_norm_index >= FREQ_RIGHT_L && max_norm_index <= FREQ_RIGHT_H){
-		left_motor_set_speed(600);
-		right_motor_set_speed(-600);
-	}
-	//go backward
-	else if(max_norm_index >= FREQ_BACKWARD_L && max_norm_index <= FREQ_BACKWARD_H){
-		left_motor_set_speed(-600);
-		right_motor_set_speed(-600);
-	}
-	else{
-		left_motor_set_speed(0);
-		right_motor_set_speed(0);
-	}
-	
+	return classify;
 }
 
 void extract_FFT(float* data)
@@ -121,6 +138,7 @@ void extract_FFT(float* data)
 */
 void processAudioData(int16_t *data, uint16_t num_samples){
 
+	static int compteur = 0;
 	/*
 	*
 	*	We get 160 samples per mic every 10ms
@@ -128,103 +146,86 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 	*	1024 samples, then we compute the FFTs.
 	*
 	*/
+	if(process_active)
+	{
+		static uint16_t nb_samples = 0;
 
-	static uint16_t nb_samples = 0;
-	static uint8_t mustSend = 0;
+		//loop to fill the buffers
+		for(uint16_t i = 0 ; i < num_samples ; i+=4){
+			//construct an array of complex numbers. Put 0 to the imaginary part
+			micLeft_cmplx_input[nb_samples] = (float)data[i + MIC_LEFT];
 
-	//loop to fill the buffers
-	for(uint16_t i = 0 ; i < num_samples ; i+=4){
-		//construct an array of complex numbers. Put 0 to the imaginary part
-		micRight_cmplx_input[nb_samples] = (float)data[i + MIC_RIGHT];
-		micLeft_cmplx_input[nb_samples] = (float)data[i + MIC_LEFT];
-		micBack_cmplx_input[nb_samples] = (float)data[i + MIC_BACK];
-		micFront_cmplx_input[nb_samples] = (float)data[i + MIC_FRONT];
+			nb_samples++;
 
-		nb_samples++;
-
-		micRight_cmplx_input[nb_samples] = 0;
-		micLeft_cmplx_input[nb_samples] = 0;
-		micBack_cmplx_input[nb_samples] = 0;
-		micFront_cmplx_input[nb_samples] = 0;
-
-		nb_samples++;
-
-		//stop when buffer is full
-		if(nb_samples >= (2 * FFT_SIZE)){
+			micLeft_cmplx_input[nb_samples] = 0;
+	
+			nb_samples++;
+	
+			//stop when buffer is full
+			if(nb_samples >= (2 * FFT_SIZE)){
 			break;
+			}	
 		}
-	}
 
-	if(nb_samples >= (2 * FFT_SIZE)){
-		/*	FFT proccessing
-		*
-		*	This FFT function stores the results in the input buffer given.
-		*	This is an "In Place" function. 
-		*/
+		if(nb_samples >= (2 * FFT_SIZE)){
+			/*	FFT proccessing
+			*
+			*	This FFT function stores the results in the input buffer given.
+			*	This is an "In Place" function. 
+			*/
 
-		doFFT_optimized(FFT_SIZE, micRight_cmplx_input);
-		doFFT_optimized(FFT_SIZE, micLeft_cmplx_input);
-		doFFT_optimized(FFT_SIZE, micFront_cmplx_input);
-		doFFT_optimized(FFT_SIZE, micBack_cmplx_input);
+			doFFT_optimized(FFT_SIZE, micLeft_cmplx_input);
 
-		/*	Magnitude processing
-		*
-		*	Computes the magnitude of the complex numbers and
-		*	stores them in a buffer of FFT_SIZE because it only contains
-		*	real numbers.
-		*
-		*/
-		arm_cmplx_mag_f32(micRight_cmplx_input, micRight_output, FFT_SIZE);
-		arm_cmplx_mag_f32(micLeft_cmplx_input, micLeft_output, FFT_SIZE);
-		arm_cmplx_mag_f32(micFront_cmplx_input, micFront_output, FFT_SIZE);
-		arm_cmplx_mag_f32(micBack_cmplx_input, micBack_output, FFT_SIZE);
+			/*	Magnitude processing
+			*
+			*	Computes the magnitude of the complex numbers and
+			*	stores them in a buffer of FFT_SIZE because it only contains
+			*	real numbers.
+			*
+			*/
+			arm_cmplx_mag_f32(micLeft_cmplx_input, micLeft_output, FFT_SIZE);
 
-		//sends only one FFT result over 10 for 1 mic to not flood the computer
-		//sends to UART3
-		if(mustSend > 8){
-			//signals to send the result to the computer
-			chBSemSignal(&sendToComputer_sem);
-			mustSend = 0;
+			nb_samples = 0;
+
+			float test_example[NB_FREQ];
+	
+	
+			test_example[0] = (micLeft_output[FREQ1_L] + micLeft_output[FREQ1_H])/(2*70000);
+			test_example[1] = micLeft_output[FREQ2]/70000;
+			test_example[2] = (micLeft_output[FREQ3_L] + micLeft_output[FREQ3_H])/(2*70000);
+			test_example[3] = (micLeft_output[FREQ4_L] + micLeft_output[FREQ4_H])/(2*70000);
+			test_example[4] = (micLeft_output[FREQ5_L] + micLeft_output[FREQ5_H])/(2*70000);
+	
+	
+			uint8_t class = 0;
+			class = pnn(NB_CLASSES, NB_EXEMPLES, NB_FREQ, SMOOTHING, test_example, examples);
+
+			if(class == GO)
+			{
+				//extract_FFT(micLeft_output);
+			//if(compteur++ > 1000)
+			//{
+				vocal_command  = TRUE;
+				process_active = FALSE;
+				//compteur = 0;
+				//chprintf((BaseSequentialStream *) &SDU1, "GO");
+			}
+			//}
 		}
-		nb_samples = 0;
-		mustSend++;
-
-		//sound_remote(micLeft_output);
-		extract_FFT(micLeft_output);
-
 	}
 }
 
-void wait_send_to_computer(void){
-	chBSemWait(&sendToComputer_sem);
-}
-
-float* get_audio_buffer_ptr(BUFFER_NAME_t name){
+float* get_audio_buffer_ptr(BUFFER_NAME_t name)
+{
 	if(name == LEFT_CMPLX_INPUT){
 		return micLeft_cmplx_input;
 	}
-	else if (name == RIGHT_CMPLX_INPUT){
-		return micRight_cmplx_input;
-	}
-	else if (name == FRONT_CMPLX_INPUT){
-		return micFront_cmplx_input;
-	}
-	else if (name == BACK_CMPLX_INPUT){
-		return micBack_cmplx_input;
-	}
-	else if (name == LEFT_OUTPUT){
+	if (name == LEFT_OUTPUT){
 		return micLeft_output;
-	}
-	else if (name == RIGHT_OUTPUT){
-		return micRight_output;
-	}
-	else if (name == FRONT_OUTPUT){
-		return micFront_output;
-	}
-	else if (name == BACK_OUTPUT){
-		return micBack_output;
 	}
 	else{
 		return NULL;
 	}
 }
+
+

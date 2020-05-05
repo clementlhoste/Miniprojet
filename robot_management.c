@@ -6,6 +6,7 @@
 #include <main.h>
 #include <motors.h>
 #include <process_image.h>
+#include <audio_processing.h>
 #include <robot_management.h>
 #include "../lib/e-puck2_main-processor/src/leds.h"
 #include "../lib/e-puck2_main-processor/src/selector.h"
@@ -163,7 +164,6 @@ void gerer_led_inter(int8_t dir, unsigned int state)
 	    default:
 	 		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR gest led inter");
 	}
-
 }
 
 
@@ -300,7 +300,7 @@ static THD_FUNCTION(Rob_management, arg) {
     //DEMO1 : line alignment, robot moving through the maze, displacement algorithm, management of obstacles as walls
     //DEMO2 : same but now the robot can go through obstacles like a battering ram, voice recognition, voice command "go" etc..PNN
     static int8_t mode = NORMAL;
-    static _Bool condition_degommage = true;
+    //static _Bool condition_degommage = true;
 
     gerer_led(NORMAL,1); //init les LEDS
  
@@ -415,8 +415,13 @@ static THD_FUNCTION(Rob_management, arg) {
         			speed_correction = 0;
         			left_motor_set_pos(0);
         			right_motor_set_pos(0);
-        			pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
-        			if(condition_degommage) mode = ATTAQUE;
+        			pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
+        			active_audio_processing();
+        			if(return_vocal_command())
+        			{
+                		desactive_audio_processing();
+        				mode = ATTAQUE;
+        			}
         		}
         		break;
 

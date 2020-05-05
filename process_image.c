@@ -6,12 +6,10 @@
 
 #include <main.h>
 #include <camera/po8030.h>
-
 #include <process_image.h>
 
 
-static float distance_cm = 0;
-static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	//middle
+static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	//initialization of the line position at the middle of the camera range
 static uint16_t line_width = 0;
 float std_dev = 0;
 
@@ -110,14 +108,6 @@ uint16_t extract_line_width(uint8_t *buffer){
 	}
 }
 
-//allows to disable automatics settings like Auto Exposure
-// and autowhitebalance. Should improve our demo
-void disable_aebw(void)
-{
-    //po8030_set_awb(0);
-    //po8030_set_ae(0);
-}
-
 static THD_WORKING_AREA(waCaptureImage, 256);
 static THD_FUNCTION(CaptureImage, arg) {
 
@@ -125,7 +115,7 @@ static THD_FUNCTION(CaptureImage, arg) {
     (void)arg;
 
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 10 + 11 (minimum 2 lines because reasons)
-	po8030_advanced_config(FORMAT_RGB565, 0, 10, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1); //desactiver balance des blancs après un moment
+	po8030_advanced_config(FORMAT_RGB565, 0, 10, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1); //desactiver balance des blancs aprï¿½s un moment
 	dcmi_enable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
@@ -133,11 +123,11 @@ static THD_FUNCTION(CaptureImage, arg) {
     while(1){
 
     	//starts a capture
-		dcmi_capture_start();
-		//waits for the capture to be done
-		wait_image_ready();
-		//signals an image has been captured
-		chBSemSignal(&image_ready_sem);
+	dcmi_capture_start();
+	//waits for the capture to be done
+	wait_image_ready();
+	//signals an image has been captured
+	chBSemSignal(&image_ready_sem);
     }
 }
 
@@ -149,68 +139,35 @@ static THD_FUNCTION(ProcessImage, arg) {
     (void)arg;
 
     static _Bool init = TRUE;
-    disable_aebw();
 
 	uint8_t *img_buff_ptr;
 	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
-	//uint16_t lineWidth = 0;
-	//uint8_t temp = 0;
 
-	bool send_to_computer = true;
-
-
-    while(1){
-    	//waits until an image has been captured
+    while(1)
+    {
+    		//waits until an image has been captured
         chBSemWait(&image_ready_sem);
 
-        if (init)
-        {
-        	init = FALSE;
-        	disable_aebw();
-        }
+        if (init) init = FALSE;
+
 		//gets the pointer to the array filled with the last image in RGB565    
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
-		//Extracts only the red pixels
-		for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
+		//extracts only the red pixels
+		for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2)
+		{
 			//extracts first 5bits of the first byte
 			//takes nothing from the second byte
 			image[i/2] = (uint8_t)img_buff_ptr[i]&0xF8;
 		}
 
-		//Extracts only the blue pixels
-		//for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
-				//extracts first 5bits of the first byte
-				//takes nothing from the second byte
-				//image[i/2] = (uint8_t)img_buff_ptr[i+1]&0x1F;
-		//}
-
-		//Extract green color (6 bits) b5->b10
-		//for(uint16_t i = 0; i < (2*IMAGE_BUFFER_SIZE); i++)
-		//{
-			//temp = (img_buff_ptr[i] & MSK_GREEN1) << 3;
-			//temp = temp | ((img_buff_ptr[++i] & MSK_GREEN2) >> 5);
-			//image[i/2] = temp;
-		//}
-
 		//search for a line in the image and gets its width in pixels
 		line_width = extract_line_width(image);
-
-		//converts the width into a distance between the robot and the camera
-		if(line_width){
-			distance_cm = PXTOCM/line_width;
-		}
-
-		if(send_to_computer){
-			//sends to the computer the image
-			SendUint8ToComputer(image, IMAGE_BUFFER_SIZE);
-		}
-		//invert the bool
-		send_to_computer = !send_to_computer;
     }
 }
 
-uint16_t get_line_width(void){
+uint16_t get_line_width(void)
+{
 	return line_width;
 }
 
@@ -219,15 +176,13 @@ float get_std_dev(void)
 	return std_dev;
 }
 
-float get_distance_cm(void){
-	return distance_cm;
-}
-
-uint16_t get_line_position(void){
+uint16_t get_line_position(void)
+{
 	return line_position;
 }
 
-void process_image_start(void){
+void process_image_start(void)
+{
 	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO+10, ProcessImage, NULL);
 	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO+10, CaptureImage, NULL);
 }

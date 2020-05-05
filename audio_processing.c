@@ -138,7 +138,6 @@ void extract_FFT(float* data)
 */
 void processAudioData(int16_t *data, uint16_t num_samples){
 
-	static int compteur = 0;
 	/*
 	*
 	*	We get 160 samples per mic every 10ms
@@ -202,15 +201,9 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 
 			if(class == GO)
 			{
-				//extract_FFT(micLeft_output);
-			//if(compteur++ > 1000)
-			//{
 				vocal_command  = TRUE;
 				process_active = FALSE;
-				//compteur = 0;
-				//chprintf((BaseSequentialStream *) &SDU1, "GO");
 			}
-			//}
 		}
 	}
 }

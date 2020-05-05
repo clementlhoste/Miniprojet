@@ -12,30 +12,18 @@
 #include <chprintf.h>
 #include <spi_comm.h>
 #include <audio/microphone.h>
+#include <arm_math.h>
 
 #include <process_image.h>
 #include <audio_processing.h>
 #include <robot_management.h>
-#include <arm_math.h>
 
-
-//uncomment to send the FFTs results from the real microphones
-#define SEND_FROM_MIC
-
-//uncomment to use double buffering to send the FFT to the computer
-#define DOUBLE_BUFFERING
-
+// Necessary declarations to use the proximity sensors
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
-void SendUint8ToComputer(uint8_t* data, uint16_t size) 
-{
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&size, sizeof(uint16_t));
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)data, size);
-}
-
+// Function called in main function to initialize the serial communication (DELETE?)
 static void serial_start(void)
 {
 	static SerialConfig ser_cfg = {
@@ -50,24 +38,24 @@ static void serial_start(void)
 
 int main(void)
 {
-
     halInit();
     chSysInit();
     mpu_init();
 
-    //starts the serial communication
+    //starts the serial communication (to DELETE)
     serial_start();
-    //start the USB communication
+    //starts the USB communication (to DELETE)
     usb_start();
     //starts the camera
     dcmi_start();
 	po8030_start();
 
+	//initialization necessary for the use of proximity sensors
 	messagebus_init(&bus, &bus_lock, &bus_condvar);
 
 	//inits the motors
 	motors_init();
-	//allows us to use the rgb leds
+	//allows us to use the RGB leds
 	spi_comm_start();
 
 	//starts the ToF Thread
@@ -77,30 +65,26 @@ int main(void)
 	proximity_start();
 	calibrate_ir();
 
-	//starts the threads for the pi regulator and the processing of the image
+	//starts the threads for the robot management and the processing of the image in order to follow lines,
+	//intersection detection and end of lines
 	process_image_start();
 	rob_management_start();
 
 	//send_tab is used to save the state of the buffer to send (double buffering)
-	//to avoid modifications of the buffer while sending it
+	//to avoid modifications of the buffer while sending it //
 	static float send_tab[FFT_SIZE];
 
-	#ifdef SEND_FROM_MIC
-	    //starts the microphones processing thread.
-	    //it calls the callback given in parameter when samples are ready
-	    mic_start(&processAudioData);
-	#endif  /* SEND_FROM_MIC */
 
+	 //starts the microphones processing thread.
+	 //it calls the callback given in parameter when samples are ready
+	 mic_start(&processAudioData);
 
 
     /* Infinite loop. */
     while (1) {
 
-        #ifdef DOUBLE_BUFFERING
-    		//we copy the buffer to avoid conflicts
-    		arm_copy_f32(get_audio_buffer_ptr(LEFT_OUTPUT), send_tab, FFT_SIZE);
-    		//SendFloatToComputer((BaseSequentialStream *) &SD3, send_tab, FFT_SIZE);
-		#endif
+    //we copy the buffer to avoid conflicts
+    	arm_copy_f32(get_audio_buffer_ptr(LEFT_OUTPUT), send_tab, FFT_SIZE);
 
     	//waits 1 second
  	   	chThdSleepMilliseconds(1000);

@@ -350,7 +350,7 @@ static THD_FUNCTION(Rob_management, arg) {
         				mode = DEMI_TOUR;
         			}
         		}
-        		else if (ambient_light > 3400 && blanc) //proxi
+        		else if (ambient_light > 3350 && blanc) //small ambient light and end of line
         		{
         			left_motor_set_pos(0);
         			right_motor_set_pos(0);
@@ -468,7 +468,7 @@ static THD_FUNCTION(Rob_management, arg) {
         		{
               		speed=0;
         		}
-        		if(ambient_light < 3500) mode = NORMAL;
+        		if(ambient_light < 3400) mode = NORMAL;
    				break;
 
         	default:

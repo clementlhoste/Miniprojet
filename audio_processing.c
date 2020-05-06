@@ -30,20 +30,24 @@ static float micLeft_output[FFT_SIZE];
 #define FREQ5_H			202	//3156 Hz
 
 //PNN parameters
-#define	NB_CLASSES		2
-#define	NB_EXEMPLES		4
+#define	NB_CLASSES		3
+#define	NB_EXEMPLES		6
 #define NB_FREQ			5
-#define SMOOTHING		0.5f
-#define N1				3
-#define N2				1
-enum{VOID=1,GO};
+#define SMOOTHING		0.06f
+#define N1				1
+#define N2				3
+#define N3				2
+enum{VOID=1,SPEAK,GO}; //3 classes
 
-static float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497},
-												{0.025389122,0.022923238,0.008571391,0.01391224,0.011094523},
-												{0.077949966,0.023574965,0.009795453,0.013051499,0.010085111},
+static float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497},  //VOID
+												{0.025389122,0.022923238,0.008571391,0.01391224,0.011094523},	//SPEAK
+												{0.238694565,0.048119511,0.021042294,0.026486421,0.013906452},	//SPEAK
+												{0.077949966,0.023574965,0.009795453,0.013051499,0.010085111},	//SPEAK
 												//{0.056604504,0.033797138,0.007765485,0.014088029,0.01118684}
-												{0.525953696,0.076893209,0.012715966,0.018951827,0.013572355}
+												{0.525953696,0.076893209,0.012715966,0.018951827,0.013572355},	//GO
+												{0.233461892,0.074033011,0.016969792,0.022156961,0.021261356}	//GO
 											   };
+
 
 static _Bool process_active = FALSE;
 static _Bool vocal_command  = FALSE;
@@ -74,13 +78,23 @@ int pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d], flo
 	float largest = 0;
 	float sum[C];
 	uint8_t Nk = 0;
+	uint8_t offset = 0;
 
 	// The OUTPUT layer which computes the pdf for each class C
 	for (uint8_t k=1; k<=C; k++)
 	{
 		sum[k] = 0;
-		if(k == VOID)	Nk = N1;
-		if(k == GO)		Nk = N2;
+		if(k == VOID)   Nk = N1;
+		if(k == SPEAK)
+		{
+			Nk = N2;
+			offset = N1; //should begin after N1 lines and do N2 lines
+		}
+		if(k == GO)
+		{
+			Nk = N3;
+			offset = (N1+N2); //should begin after N1+N2 lines and do N3 lines
+		}
 
 		// The SUMMATION layer which accumulates the pdf
 		// for each example from the particular class k
@@ -91,20 +105,17 @@ int pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d], flo
 			// The PATTERN layer that multiplies the test example by the weights
 			for (uint8_t j=0; j<d; j++)
 			{
-				product += (examples[i][j] - test_example[j])*(examples[i][j]-test_example[j]);
+				product += (examples[i+offset][j] - test_example[j])*(examples[i+offset][j]-test_example[j]);
 			}
-			//chprintf((BaseSequentialStream *) &SDU1, "#1 product (k %d,i %d) = %f \n;",k,i,product);
 			product = (-product) / (2* sigma * sigma);
-			//chprintf((BaseSequentialStream *) &SDU1, "#2 product (k %d,i %d) = %f \n;",k,i,product);
 			product = exp(product);
-			//chprintf((BaseSequentialStream *) &SDU1, "#3 product (k %d,i %d) = %f \n;",k,i,product);
 			sum[k] += product;
 		}
 		sum[k] /= Nk;
 	}
+	//choose the largest "probability"
 	for (uint8_t k=1; k<=C; k++)
 	{
-		//chprintf((BaseSequentialStream *) &SDU1, "probab %d: %f \n;",k,sum[k]);
 		if (sum[k] > largest)
 		{
 			largest = sum[k];
@@ -114,6 +125,8 @@ int pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d], flo
 	return classify;
 }
 
+//allows to export FFT values, using the catpure of Real Term, into a .txt
+//can be used directly in Excel to easily analyse data
 void extract_FFT(float* data)
 {
 	chprintf((BaseSequentialStream *) &SDU1, "%f;",data[FREQ1_L]);

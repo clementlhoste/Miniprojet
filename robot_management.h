@@ -9,7 +9,7 @@ enum {NORMAL, OBSTACLE, ATTAQUE, INTERSECTION, CHOIX_CHEMIN, DEMI_TOUR, END};
 enum {RIGHT, FRONT, LEFT, BACK};
 
 // Enum to define the different demo modes
-enum {DEMO1, DEMO2, DEMO3, NB_MODES};
+enum {DEMO1, DEMO2, DEMO3, NB_DEMOS};
 
 #define CONV_CM2STEP		1000/13
 #define MAX_STD_INTER		10.7f

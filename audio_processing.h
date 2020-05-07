@@ -30,16 +30,19 @@ typedef enum {
 #define FREQ5_H			202	//3156 Hz
 
 //PNN parameters
-#define	NB_CLASSES		4
 #define	NB_EXEMPLES		11
 #define NB_FREQ			5
-#define SMOOTHING		0.3f
-#define N1				1
-#define N2				4
-#define N3				3
-#define N4				3
+#define SMOOTHING		0.3f 
+#define N1				1 //Nb of examples of class 1
+#define N2				4 //Nb of examples of class 2
+#define N3				3 //Nb of examples of class 3
+#define N4				3 //Nb of examples of class 4
 
-enum{VOID=1,SPEAK,GO, BACK}; //4 classes
+//needed to normalise input data
+#define DATA_NORM		70000
+
+// 4 classes, C_BACK to avoid conflict w/ direction in main.h
+enum{VOID=1,SPEAK,GO,C_BACK, NB_CLASSES};
 
 //begins to analyse audio data (FFT + PNN)
 void active_audio_processing(void);
@@ -47,7 +50,7 @@ void active_audio_processing(void);
 //stops to analyse audio data (FFT + PNN)
 void desactive_audio_processing(void);
 
-//tells if a go was detected
+//exports the result of analysis (0 = nothing, GO, C_BACK)
 int8_t return_vocal_command(void);
 
 

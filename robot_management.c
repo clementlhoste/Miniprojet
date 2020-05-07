@@ -11,10 +11,7 @@
 #include "../lib/e-puck2_main-processor/src/leds.h"
 #include "../lib/e-puck2_main-processor/src/selector.h"
 
-//utile?
-
-
-//simple PI regulator implementation to manage line alignment and obstacles
+//PID regulator implementation to manage line alignment and obstacles
 int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 
 	int16_t error = 0;
@@ -23,6 +20,7 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 	static int sum_error = 0;
 	static int16_t error_pre = 0;
 
+	//if the robot is changing his direction, reset the integral term
 	if(reset)
 	{
 		sum_error = 0;
@@ -32,7 +30,6 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 
 	error = (int)distance - (int)goal;
 
-	//chprintf((BaseSequentialStream *)&SDU1, "error %d", error);
 
 	//disables the PI regulator if the error is to small
 	//this avoids to always move as we cannot exactly be aligned and the camera is a bit noisy
@@ -41,6 +38,7 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 	}
 
 	sum_error += error;
+
 	//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
 	if(sum_error > MAX_SUM_ERROR_L){
 		sum_error = MAX_SUM_ERROR_L;
@@ -48,15 +46,14 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 		sum_error = -MAX_SUM_ERROR_L;
 	}
 
-	//chprintf((BaseSequentialStream *)&SDU1, "test");
-	//chprintf((BaseSequentialStream *)&SDU1, "sum error %d", sum_error);
-
+	//activate the Kd coefficient only if error_pre exist
 	if(error_pre)
 		speed = KPL * error + KIL * sum_error + KDL*(error-error_pre);
 	else
 		speed = KPL * error + KIL * sum_error;
 
 	error_pre = error;
+	
     return speed;
 }
 
@@ -316,9 +313,7 @@ static THD_FUNCTION(Rob_management, arg) {
         int8_t  vocal_command = 0;
 
         //Mode change, using selector	
-		if((get_selector()%NB_MODES) == DEMO1) demo = DEMO1;
-    	if((get_selector()%NB_MODES) == DEMO2) demo = DEMO2;
-    	if((get_selector()%NB_MODES) == DEMO3) demo = DEMO3;
+    	demo = get_selector()%NB_DEMOS;
 
     	//MAGIC NB
         float ambient_light = (get_ambient_light(2)+get_ambient_light(5)+get_ambient_light(1)+get_ambient_light(6) + get_ambient_light(0) + get_ambient_light(7))/6;//magic nb
@@ -438,7 +433,7 @@ static THD_FUNCTION(Rob_management, arg) {
                 				desactive_audio_processing();
         						if (vocal_command == GO)
         							mode = ATTAQUE;
-        					    else if(vocal_command == BACK)
+        					    else if(vocal_command == C_BACK)
         					    {
         						   mode = DEMI_TOUR;
         						}
@@ -501,7 +496,7 @@ static THD_FUNCTION(Rob_management, arg) {
         //change the states of the led, switch off previous mode LED and switch on new one 
        	mode_led(mode);
 
-        //applies the speed from the PI regulator and the correction for the rotation
+        //applies the speed from the PID regulator and the correction for the rotation
         right_motor_set_speed(speed - ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
         left_motor_set_speed(speed + ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
 

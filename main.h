@@ -17,19 +17,19 @@
 #define PXTOCM					1570.0f
 
 //Constants for the robot management mainly
-#define SPEED_DE_CROISIERE		400 			// Speed when in mode normal
-#define VITESSE_RECUL			-500			// Speed when obstacle (door) detected and the robot takes distance with obstacle
-#define VITESSE_CHARGE			1000			// Speed of the robot when it goes forward to break down an obstacle
+#define SPEED_DE_CROISIERE		400			// Speed when in mode normal
+#define VITESSE_RECUL			-500		// Speed when obstacle (door) detected and the robot takes distance with obstacle
+#define VITESSE_CHARGE			1000		// Speed of the robot when it goes forward to break down an obstacle
 #define GOAL_DISTANCE 			40.0f		// Detection distance of obstacles (doors)
 #define MAX_DISTANCE 			25.0f
-#define DISTANCE_CHARGE			100 			// Set-back distance before breaking down an obstacle (demo 2)
-#define VITESSE_APPROCHE_INT		200			// Speed when approaching an intersection
+#define DISTANCE_CHARGE			100 		// Set-back distance before breaking down an obstacle (demo 2)
+#define VITESSE_APPROCHE_INT	200			// Speed when approaching an intersection
 #define VITESSE_ROT_CHEMIN    	250			// Absolute value of speed for the 2 motors when
 											// rotating to choose a new path at an intersection
 
 #define PERIMETER_EPUCK			13
-#define ROTATION_THRESHOLD		10
-#define ROTATION_COEFF			2			// Coefficient used to
+#define ROTATION_THRESHOLD		10			// Do not rotafe if the error is small
+#define ROTATION_COEFF			2			// Coefficient used to split PID action
 
 //Constants for the PID regulator
 #define ERROR_THRESHOLD			5 			// [mm] DELETE le mm ?  because the camera is noisy (we don't want to take noise in consideration

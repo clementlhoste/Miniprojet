@@ -83,10 +83,10 @@ int main(void)
     /* Infinite loop. */
     while (1)
     {
-    		//We copy the buffer to avoid conflicts
-    		arm_copy_f32(get_audio_buffer_ptr(LEFT_OUTPUT), send_tab, FFT_SIZE);
+    	//We copy the buffer to avoid conflicts, double buffering
+    	arm_copy_f32(get_audio_buffer_ptr(LEFT_OUTPUT), send_tab, FFT_SIZE);
 
-    		//Waits 1 second
+    	//Waits 1 second
  	   	chThdSleepMilliseconds(1000);
     }
 }

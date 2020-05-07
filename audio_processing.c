@@ -21,7 +21,6 @@ static float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.00646
 												{0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},  //SPEAK
 												{0.238694565,0.048119511,0.021042294,0.026486421,0.013906452},	//SPEAK
 												{0.077949966,0.023574965,0.009795453,0.013051499,0.010085111},	//SPEAK
-												//{0.056604504,0.033797138,0.007765485,0.014088029,0.01118684},
 												{0.525953696,0.076893209,0.012715966,0.018951827,0.013572355},	//GO
 												{0.233461892,0.074033011,0.016969792,0.022156961,0.021261356},	//GO
 												{0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},	//GO
@@ -33,21 +32,7 @@ static float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.00646
 static _Bool process_active = FALSE;
 static int8_t vocal_command  = 0;
 
-void active_audio_processing(void)
-{
-	process_active = TRUE;
-}
 
-void desactive_audio_processing(void)
-{
-	process_active = FALSE;
-	vocal_command  = 0;
-}
-
-int8_t return_vocal_command(void)
-{
-	return vocal_command;
-}
 
 //Probablistic Neural Network
 //This fonction was adapted from https://easyneuralnetwork.blogspot.com/2015/01/probabilistic-neural-network.html
@@ -78,7 +63,7 @@ int pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d], flo
 			Nk = N3;
 			offset = (N1+N2); //should begin after N1+N2 lines and do N3 lines
 		}
-		if(k == BACK)
+		if(k == C_BACK)
 		{
 			Nk = N4;
 			offset = (N1+N2+N3); //should begin after N1+N2+N3 lines and do N4 lines
@@ -111,7 +96,7 @@ int pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d], flo
 	return classify;
 }
 
-//allows to export FFT values, using the catpure of Real Term, into a .txt
+//allows to export FFT values, using the catpure tool of Real Term, into a .txt
 //can be used directly in Excel to easily analyse data
 void extract_FFT(float* data)
 {
@@ -182,22 +167,24 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			*/
 			arm_cmplx_mag_f32(micLeft_cmplx_input, micLeft_output, FFT_SIZE);
 
+			//reset for the buffer
 			nb_samples = 0;
 
+			//this is the data we will give as input in the PNN, after normalization
 			float test_example[NB_FREQ];
-	
-	
-			test_example[0] = (micLeft_output[FREQ1_L] + micLeft_output[FREQ1_H])/(2*70000);
-			test_example[1] = micLeft_output[FREQ2]/70000;
-			test_example[2] = (micLeft_output[FREQ3_L] + micLeft_output[FREQ3_H])/(2*70000);
-			test_example[3] = (micLeft_output[FREQ4_L] + micLeft_output[FREQ4_H])/(2*70000);
-			test_example[4] = (micLeft_output[FREQ5_L] + micLeft_output[FREQ5_H])/(2*70000);
-	
-	
+			test_example[0] = (micLeft_output[FREQ1_L] + micLeft_output[FREQ1_H])/(2*DATA_NORM);
+			test_example[1] = micLeft_output[FREQ2]/DATA_NORM;
+			test_example[2] = (micLeft_output[FREQ3_L] + micLeft_output[FREQ3_H])/(2*DATA_NORM);
+			test_example[3] = (micLeft_output[FREQ4_L] + micLeft_output[FREQ4_H])/(2*DATA_NORM0);
+			test_example[4] = (micLeft_output[FREQ5_L] + micLeft_output[FREQ5_H])/(2*DATA_NORM);
+		
+			//we give parameters to PNN, plus an array with input FFT verctor (test_example) to be classified
+			//the examples matrix contains examples of each class
 			uint8_t class = 0;
 			class = pnn(NB_CLASSES, NB_EXEMPLES, NB_FREQ, SMOOTHING, test_example, examples);
 
-			if(class == GO || class == BACK)
+			//if a command is detected, we save it and we stop processing
+			if(class == GO || class == C_BACK)
 			{
 				vocal_command  = class;
 				process_active = FALSE;
@@ -207,6 +194,11 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 		}
 	}
 }
+
+
+
+///////////// PUBLIC FUNCTIONS ///////////// 
+
 
 float* get_audio_buffer_ptr(BUFFER_NAME_t name)
 {
@@ -221,4 +213,21 @@ float* get_audio_buffer_ptr(BUFFER_NAME_t name)
 	}
 }
 
+// begin the analysis of sound samples (FFT + PNN)
+void active_audio_processing(void)
+{
+	process_active = TRUE;
+}
 
+// stop the analysis of sound samples (FFT + PNN)
+void desactive_audio_processing(void)
+{
+	process_active = FALSE;
+	vocal_command  = 0;
+}
+
+//exports the result of the sound analysis (nothing or the command)
+int8_t return_vocal_command(void)
+{
+	return vocal_command;
+}

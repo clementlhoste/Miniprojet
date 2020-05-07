@@ -108,6 +108,8 @@ uint16_t extract_line_width(uint8_t *buffer){
 	}
 }
 
+/*
+ */
 static THD_WORKING_AREA(waCaptureImage, 256);
 static THD_FUNCTION(CaptureImage, arg) {
 
@@ -131,7 +133,8 @@ static THD_FUNCTION(CaptureImage, arg) {
     }
 }
 
-
+/*
+ */
 static THD_WORKING_AREA(waProcessImage, 1024);
 static THD_FUNCTION(ProcessImage, arg) {
 

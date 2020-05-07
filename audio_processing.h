@@ -23,7 +23,7 @@ void active_audio_processing(void);
 void desactive_audio_processing(void);
 
 //tells if a go was detected
-_Bool return_vocal_command(void);
+int8_t return_vocal_command(void);
 
 
 void processAudioData(int16_t *data, uint16_t num_samples);

@@ -315,8 +315,11 @@ static THD_FUNCTION(Rob_management, arg) {
         static uint8_t compteur_int = 0;
         static uint8_t compteur_bl  = 0;
         static uint8_t compteur_dt  = 0;
+        static uint8_t compteur_obst = 0;
 
-       float ambient_light = (get_ambient_light(2)+get_ambient_light(5)+get_ambient_light(1)+get_ambient_light(6) + get_ambient_light(0) + get_ambient_light(7))/6;//magic nb
+        int8_t  vocal_command = 0;
+
+        float ambient_light = (get_ambient_light(2)+get_ambient_light(5)+get_ambient_light(1)+get_ambient_light(6) + get_ambient_light(0) + get_ambient_light(7))/6;//magic nb
        //chprintf((BaseSequentialStream *)&SDU1, "amb: %f", ambient_light);
 
        //toujours besoin de std_dev?
@@ -417,10 +420,20 @@ static THD_FUNCTION(Rob_management, arg) {
         			right_motor_set_pos(0);
         			pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
         			active_audio_processing();
-        			if(return_vocal_command())
+        			if(compteur_obst++ > 20)
         			{
-                		desactive_audio_processing();
-        				mode = ATTAQUE;
+        				compteur_obst = 0;
+        				vocal_command = return_vocal_command();
+        				if(vocal_command != 0)
+        				{
+                			desactive_audio_processing();
+        					if (vocal_command == 1)
+        						mode = ATTAQUE;
+        					else if(vocal_command == 2)
+        					{
+        						mode = DEMI_TOUR;
+        					}
+        				}
         			}
         		}
         		break;

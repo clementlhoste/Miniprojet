@@ -30,27 +30,34 @@ static float micLeft_output[FFT_SIZE];
 #define FREQ5_H			202	//3156 Hz
 
 //PNN parameters
-#define	NB_CLASSES		3
-#define	NB_EXEMPLES		6
+#define	NB_CLASSES		4
+#define	NB_EXEMPLES		11
 #define NB_FREQ			5
-#define SMOOTHING		0.06f
+#define SMOOTHING		0.3f
 #define N1				1
-#define N2				3
-#define N3				2
-enum{VOID=1,SPEAK,GO}; //3 classes
+#define N2				4
+#define N3				3
+#define N4				3
+
+enum{VOID=1,SPEAK,GO, BACK}; //4 classes
 
 static float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497},  //VOID
-												{0.025389122,0.022923238,0.008571391,0.01391224,0.011094523},	//SPEAK
+												{0.025389122,0.022923238,0.008571391,0.013912240,0.011094523},	//SPEAK
+												{0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},  //SPEAK
 												{0.238694565,0.048119511,0.021042294,0.026486421,0.013906452},	//SPEAK
 												{0.077949966,0.023574965,0.009795453,0.013051499,0.010085111},	//SPEAK
-												//{0.056604504,0.033797138,0.007765485,0.014088029,0.01118684}
+												//{0.056604504,0.033797138,0.007765485,0.014088029,0.01118684},
 												{0.525953696,0.076893209,0.012715966,0.018951827,0.013572355},	//GO
-												{0.233461892,0.074033011,0.016969792,0.022156961,0.021261356}	//GO
+												{0.233461892,0.074033011,0.016969792,0.022156961,0.021261356},	//GO
+												{0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},	//GO
+												{0.380157995,0.093555187,0.109508464,0.039939089,0.034523986}, 	//BACK
+												{0.175174589,0.058576963,0.033547497,0.026109697,0.015954384},	//BACK
+												{0.176715207,0.052898307,0.040889834,0.033202053,0.017457846} 	//BACK
+
 											   };
 
-
 static _Bool process_active = FALSE;
-static _Bool vocal_command  = FALSE;
+static int8_t vocal_command  = 0;
 
 void active_audio_processing(void)
 {
@@ -60,10 +67,10 @@ void active_audio_processing(void)
 void desactive_audio_processing(void)
 {
 	process_active = FALSE;
-	vocal_command  = FALSE;
+	vocal_command  = 0;
 }
 
-_Bool return_vocal_command(void)
+int8_t return_vocal_command(void)
 {
 	return vocal_command;
 }
@@ -95,12 +102,15 @@ int pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d], flo
 			Nk = N3;
 			offset = (N1+N2); //should begin after N1+N2 lines and do N3 lines
 		}
-
+		if(k == BACK)
+		{
+			Nk = N4;
+			offset = (N1+N2+N3); //should begin after N1+N2+N3 lines and do N4 lines
+		}
 		// The SUMMATION layer which accumulates the pdf
 		// for each example from the particular class k
 		for (uint8_t i=0; i<Nk; i++)
 		{
-			if(k == GO)	i = N1;
 			double product = 0;
 			// The PATTERN layer that multiplies the test example by the weights
 			for (uint8_t j=0; j<d; j++)
@@ -161,7 +171,6 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 	if(process_active)
 	{
 		static uint16_t nb_samples = 0;
-
 		//loop to fill the buffers
 		for(uint16_t i = 0 ; i < num_samples ; i+=4){
 			//construct an array of complex numbers. Put 0 to the imaginary part
@@ -214,9 +223,16 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 
 			if(class == GO)
 			{
-				vocal_command  = TRUE;
+				vocal_command  = 1;
 				process_active = FALSE;
 			}
+			else if(class == BACK)
+			{
+				vocal_command = 2;
+				process_active = FALSE;
+			}
+			else
+				vocal_command = 0;
 		}
 	}
 }

@@ -12,16 +12,13 @@
 #include "../lib/e-puck2_main-processor/src/selector.h"
 
 //utile?
-static _Bool demo = DEMO1;
+
 
 //simple PI regulator implementation to manage line alignment and obstacles
 int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 
 	int16_t error = 0;
 	int16_t speed = 0;
-
-    if((get_selector()%2) == DEMO1) demo = DEMO1;
-    if((get_selector()%2) == DEMO2) demo = DEMO2;
 
 	static int sum_error = 0;
 	static int16_t error_pre = 0;
@@ -295,21 +292,20 @@ static THD_FUNCTION(Rob_management, arg) {
     int16_t speed = 0;
     int16_t speed_correction = 0;
 
-    //mode variable is a state variable used to adapt the epuck2 behavior
+
     //demo varaiable is a state variable used to determine which part of the demonstration we are proceeding
     //DEMO1 : line alignment, robot moving through the maze, displacement algorithm, management of obstacles as walls
-    //DEMO2 : same but now the robot can go through obstacles like a battering ram, voice recognition, voice command "go" etc..PNN
+    //DEMO2 : same but now the robot can go through obstacles like a battering ram
+    //DEMO3 : the synthesis of DEMO1/2, robot is using voice recognition to deal with osbstacles using go/back command
+    static int8_t demo = DEMO1;
+
+    //mode variable is a state variable used to adapt the epuck2 behavior
     static int8_t mode = NORMAL;
-    //static _Bool condition_degommage = true;
 
     gerer_led(NORMAL,1); //init les LEDS
  
     while(1){
         time = chVTGetSystemTime();
-        
-        //distance_mm gives the distance of the detected obstacle from the robot thanks to the TOF
-        uint16_t distance_mm;
-        distance_mm = VL53L0X_get_dist_mm();
         
 		//plus condensés?
         static uint8_t compteur_int = 0;
@@ -319,13 +315,22 @@ static THD_FUNCTION(Rob_management, arg) {
 
         int8_t  vocal_command = 0;
 
+        //Mode change, using selector	
+		if((get_selector()%NB_MODES) == DEMO1) demo = DEMO1;
+    	if((get_selector()%NB_MODES) == DEMO2) demo = DEMO2;
+    	if((get_selector()%NB_MODES) == DEMO3) demo = DEMO3;
+
+    	//MAGIC NB
         float ambient_light = (get_ambient_light(2)+get_ambient_light(5)+get_ambient_light(1)+get_ambient_light(6) + get_ambient_light(0) + get_ambient_light(7))/6;//magic nb
-       //chprintf((BaseSequentialStream *)&SDU1, "amb: %f", ambient_light);
 
        //toujours besoin de std_dev?
-        float std_dev = get_std_dev();
-        _Bool intersection = (std_dev <= 10.7);
-        _Bool blanc = ((std_dev > 10.7)&&(std_dev < 15));
+        float std_dev = get_std_dev(); //performs standard deviation on the image from the camera
+        _Bool intersection = (std_dev <= MAX_STD_INTER); //cross-roads detected
+        _Bool blanc = ((std_dev > MAX_STD_INTER)&&(std_dev < MAX_STD_WHITE)); //end of the line
+
+        //distance_mm gives the distance of the detected obstacle from the robot thanks to the TOF
+        uint16_t distance_mm;
+        distance_mm = VL53L0X_get_dist_mm();
 
         switch(mode)
         {
@@ -419,19 +424,24 @@ static THD_FUNCTION(Rob_management, arg) {
         			left_motor_set_pos(0);
         			right_motor_set_pos(0);
         			pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
-        			active_audio_processing();
-        			if(compteur_obst++ > 20)
+        			if(demo = MODE2)
+        				mode = ATTAQUE;
+        			else
         			{
-        				compteur_obst = 0;
-        				vocal_command = return_vocal_command();
-        				if(vocal_command != 0)
+        				active_audio_processing();
+        				if(compteur_obst++ > 20)
         				{
-                			desactive_audio_processing();
-        					if (vocal_command == 1)
-        						mode = ATTAQUE;
-        					else if(vocal_command == 2)
+        					compteur_obst = 0;
+        					vocal_command = return_vocal_command();
+        					if(vocal_command != 0)
         					{
-        						mode = DEMI_TOUR;
+                				desactive_audio_processing();
+        						if (vocal_command == GO)
+        							mode = ATTAQUE;
+        					    else if(vocal_command == BACK)
+        					    {
+        						   mode = DEMI_TOUR;
+        						}
         					}
         				}
         			}

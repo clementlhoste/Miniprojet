@@ -15,32 +15,7 @@ static float micLeft_cmplx_input[2 * FFT_SIZE];
 //Arrays containing the computed magnitude of the complex numbers
 static float micLeft_output[FFT_SIZE];
 
-
-#define MIN_VALUE_THRESHOLD	10000 
-
-//list of used frequencies for voice recognition
-#define FREQ1_L			27	//422Hz
-#define FREQ1_H			28	//437Hz
-#define FREQ2			65 	//1016 Hz
-#define FREQ3_L			97	//1515 Hz
-#define FREQ3_H			98	//1531 Hz
-#define FREQ4_L			137	//2140 Hz
-#define FREQ4_H			138	//2156 Hz
-#define FREQ5_L			201	//3140 Hz
-#define FREQ5_H			202	//3156 Hz
-
-//PNN parameters
-#define	NB_CLASSES		4
-#define	NB_EXEMPLES		11
-#define NB_FREQ			5
-#define SMOOTHING		0.3f
-#define N1				1
-#define N2				4
-#define N3				3
-#define N4				3
-
-enum{VOID=1,SPEAK,GO, BACK}; //4 classes
-
+//Examples of each class, used to feed the PNN, and to help to classify each input (FFT vector)
 static float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497},  //VOID
 												{0.025389122,0.022923238,0.008571391,0.013912240,0.011094523},	//SPEAK
 												{0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},  //SPEAK
@@ -53,7 +28,6 @@ static float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.00646
 												{0.380157995,0.093555187,0.109508464,0.039939089,0.034523986}, 	//BACK
 												{0.175174589,0.058576963,0.033547497,0.026109697,0.015954384},	//BACK
 												{0.176715207,0.052898307,0.040889834,0.033202053,0.017457846} 	//BACK
-
 											   };
 
 static _Bool process_active = FALSE;
@@ -75,6 +49,8 @@ int8_t return_vocal_command(void)
 	return vocal_command;
 }
 
+//Probablistic Neural Network
+//This fonction was adapted from https://easyneuralnetwork.blogspot.com/2015/01/probabilistic-neural-network.html
 // C is the number of classes, N is the number of examples, Nk are from class k
 // d is the dimensionality of the training examples, sigma is the smoothing factor
 // test_example[d] is the example to be classified
@@ -221,14 +197,9 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			uint8_t class = 0;
 			class = pnn(NB_CLASSES, NB_EXEMPLES, NB_FREQ, SMOOTHING, test_example, examples);
 
-			if(class == GO)
+			if(class == GO || class == BACK)
 			{
-				vocal_command  = 1;
-				process_active = FALSE;
-			}
-			else if(class == BACK)
-			{
-				vocal_command = 2;
+				vocal_command  = class;
 				process_active = FALSE;
 			}
 			else

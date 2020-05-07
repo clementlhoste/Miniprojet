@@ -36,8 +36,8 @@
 											// during our robot alignment
 
 #define KPL						0.5f  		// Parameters for line alignment PID : values determined according
-#define KIL 				   		0.0018f	 	// to automatic lessons and experimental trials
-#define KDL 				   		4.0f			//
+#define KIL 				   	0.0018f	 	// to automatic lessons and experimental trials
+#define KDL 				   	4.0f			//
 #define TERM_I_MAX				200			// Maximum integral contribution to PID
 #define MAX_SUM_ERROR_L			TERM_I_MAX/KIL //limits sum error
 

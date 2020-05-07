@@ -16,6 +16,31 @@ typedef enum {
 	BACK_OUTPUT
 } BUFFER_NAME_t;
 
+#define MIN_VALUE_THRESHOLD	10000 
+
+//list of used frequencies for voice recognition
+#define FREQ1_L			27	// 422 Hz
+#define FREQ1_H			28	// 437 Hz
+#define FREQ2			65 	//1016 Hz
+#define FREQ3_L			97	//1515 Hz
+#define FREQ3_H			98	//1531 Hz
+#define FREQ4_L			137	//2140 Hz
+#define FREQ4_H			138	//2156 Hz
+#define FREQ5_L			201	//3140 Hz
+#define FREQ5_H			202	//3156 Hz
+
+//PNN parameters
+#define	NB_CLASSES		4
+#define	NB_EXEMPLES		11
+#define NB_FREQ			5
+#define SMOOTHING		0.3f
+#define N1				1
+#define N2				4
+#define N3				3
+#define N4				3
+
+enum{VOID=1,SPEAK,GO, BACK}; //4 classes
+
 //begins to analyse audio data (FFT + PNN)
 void active_audio_processing(void);
 

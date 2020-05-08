@@ -175,7 +175,7 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			test_example[0] = (micLeft_output[FREQ1_L] + micLeft_output[FREQ1_H])/(2*DATA_NORM);
 			test_example[1] = micLeft_output[FREQ2]/DATA_NORM;
 			test_example[2] = (micLeft_output[FREQ3_L] + micLeft_output[FREQ3_H])/(2*DATA_NORM);
-			test_example[3] = (micLeft_output[FREQ4_L] + micLeft_output[FREQ4_H])/(2*DATA_NORM0);
+			test_example[3] = (micLeft_output[FREQ4_L] + micLeft_output[FREQ4_H])/(2*DATA_NORM);
 			test_example[4] = (micLeft_output[FREQ5_L] + micLeft_output[FREQ5_H])/(2*DATA_NORM);
 		
 			//we give parameters to PNN, plus an array with input FFT verctor (test_example) to be classified
@@ -190,7 +190,9 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 				process_active = FALSE;
 			}
 			else
+			{
 				vocal_command = 0;
+			}
 		}
 	}
 }
@@ -223,7 +225,7 @@ void active_audio_processing(void)
 void desactive_audio_processing(void)
 {
 	process_active = FALSE;
-	vocal_command  = 0;
+	vocal_command  = 0; //reset the vocal_cmd
 }
 
 //exports the result of the sound analysis (nothing or the command)

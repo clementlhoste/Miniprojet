@@ -30,6 +30,7 @@ typedef enum {
 #define FREQ5_H			202	//3156 Hz
 
 //PNN parameters
+#define NB_CLASSES		4
 #define	NB_EXEMPLES		11
 #define NB_FREQ			5
 #define SMOOTHING		0.3f 
@@ -42,7 +43,7 @@ typedef enum {
 #define DATA_NORM		70000
 
 // 4 classes, C_BACK to avoid conflict w/ direction in main.h
-enum{VOID=1,SPEAK,GO,C_BACK, NB_CLASSES};
+enum{VOID=1,SPEAK,GO,C_BACK};
 
 //begins to analyse audio data (FFT + PNN)
 void active_audio_processing(void);

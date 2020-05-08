@@ -412,31 +412,30 @@ static THD_FUNCTION(Rob_management, arg) {
 
         		speed = -SPEED_DE_CROISIERE;
         		speed_correction = 0;
-        		if(distance_mm >= DISTANCE_CHARGE)
+        		if(distance_mm >= DISTANCE_CHARGE || compteur_obst) //avoid distance noise in vocal command
         		{
         			speed = 0;
         			speed_correction = 0;
         			left_motor_set_pos(0);
         			right_motor_set_pos(0);
         			pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
-        			if(demo = MODE2)
+        			if(demo == DEMO2)
         				mode = ATTAQUE;
-        			else
+        			else //mode DEMO3
         			{
-        				active_audio_processing();
-        				if(compteur_obst++ > 20)
+        				active_audio_processing(); //voice recognition enabled
+        				if(compteur_obst++ > 100)   //avoid motor noise
         				{
-        					compteur_obst = 0;
+        					set_led(LED1,1);
         					vocal_command = return_vocal_command();
         					if(vocal_command != 0)
         					{
-                				desactive_audio_processing();
+        						compteur_obst = 0;
+        						desactive_audio_processing();
         						if (vocal_command == GO)
         							mode = ATTAQUE;
         					    else if(vocal_command == C_BACK)
-        					    {
         						   mode = DEMI_TOUR;
-        						}
         					}
         				}
         			}

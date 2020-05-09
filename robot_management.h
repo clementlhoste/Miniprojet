@@ -18,13 +18,13 @@ enum {DEMO1, DEMO2, DEMO3, NB_DEMOS};
 #define ROTATION_COEFF			2				// Coefficient used to split PID action
 
 //Constants for speed
-#define SPEED_DE_CROISIERE		400			// Speed when in mode normal
-#define VITESSE_CHARGE			1000		// Speed of the robot when it goes forward to break down an obstacle
-#define VITESSE_APPROCHE_INT	200			// Speed when approaching an intersection
-#define VITESSE_ROT_CHEMIN    	250			// Absolute value of speed for the 2 motors when
-											// rotating to choose a new path at an intersection
+#define SPEED_DE_CROISIERE		400				// [step/s] Speed when in mode normal
+#define VITESSE_CHARGE			1000			// [step/s] Speed of the robot when it goes forward to break down an obstacle
+#define VITESSE_APPROCHE_INT	200				// [step/s] Speed when approaching an intersection
+#define VITESSE_ROT_CHEMIN    	250				// [step/s] Absolute value of speed for the 2 motors when
+												// [step/s] rotating to choose a new path at an intersection
 //Constants for the PID regulator
-#define ERROR_THRESHOLD			5 				// [mm] DELETE le mm ?  because the camera is noisy (we don't want to take noise in consideration
+#define ERROR_THRESHOLD			5 				// [px]  because the camera is noisy (we don't want to take noise in consideration
 												// during our robot alignment
 #define KPL						0.5f  			// Parameters for line alignment PID : values determined according
 #define KIL 				   	0.0018f	 		// to automatic lessons and experimental trials
@@ -48,20 +48,31 @@ enum {DEMO1, DEMO2, DEMO3, NB_DEMOS};
 #define NB_PROXIS				6
 
 //Distance and Rotation constants
-#define RUN_DISTANCE			100 			// Set-back distance before breaking down an obstacle (demo 2)
-#define PAST_O_DISTANCE			RUN_DISTANCE+10	// Distance where we know he have passed the obstacle 
-#define STEPS_INTER				350				// Experimentally dertermined value
-#define STEPS_HOUSE				1.5*STEPS_INTER	// Experimentally dertermined value
-#define STEPS_ATTAQUE			11*CONV_CM2STEP // Experimentally dertermined value
-#define STEPS_U_TURN			660				// Experimentally dertermined value for U turn 
-#define STEPS_Q_TURN			315				// Experimentally dertermined value for Quarter turn (Intersection)
-#define STEPS_BACK				980				// Experimentally dertermined value the back direction in Intersection
+#define RUN_DISTANCE			100 			// [mm] Set-back distance before breaking down an obstacle (demo 2)
+#define PAST_O_DISTANCE			RUN_DISTANCE+10	// [mm] Distance where we know he have passed the obstacle
+#define STEPS_INTER				350				// [steps] Experimentally dertermined value
+#define STEPS_HOUSE				1.5*STEPS_INTER	// [steps] Experimentally dertermined value
+#define STEPS_ATTAQUE			11*CONV_CM2STEP // [steps] Experimentally dertermined value
+#define STEPS_U_TURN			660				// [steps] Experimentally dertermined value for U turn
+#define STEPS_Q_TURN			315				// [steps] Experimentally dertermined value for Quarter turn (Intersection)
+#define STEPS_BACK				980				// [steps] Experimentally dertermined value the back direction in Intersection
 
 //counters
 #define CT_INTERSECTION			10				// help to be more precise in the color detection
 #define CT_BLANC				11
 
-//start the Robot Management Thread
+//Colors, RGB values
+#define RED_R					200				// rgb(200,0,0)
+#define ORANGE_R				255				// rgb(255,165,0)
+#define ORANGE_G				165
+#define BLUE_R					30				// rgb(30,144,255)
+#define BLUE_G					144
+#define BLUE_B					255
+
+
+/*
+*	Starts the Robot Management Thread
+*/
 void rob_management_start(void);
 
 #endif /* ROBOT_MANAGEMENT_H */

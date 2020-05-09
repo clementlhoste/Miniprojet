@@ -9,9 +9,9 @@
 #include <motors.h>
 
 //Constant used in different modules
-#define PERIMETER_EPUCK			13
-#define CONV_CM2STEP			1000/PERIMETER_EPUCK
-#define GOAL_DISTANCE 			40					// Detection distance of obstacles (doors)
+#define PERIMETER_EPUCK			13                   // [cm]
+#define CONV_CM2STEP			1000/PERIMETER_EPUCK // [step/cm] 
+#define GOAL_DISTANCE 			40					 // [mm] Detection distance of obstacles (doors)
 
 /* Robot wide IPC bus. */
 extern messagebus_t bus;

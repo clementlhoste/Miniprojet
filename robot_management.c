@@ -11,7 +11,16 @@
 #include "../lib/e-puck2_main-processor/src/leds.h"
 #include "../lib/e-puck2_main-processor/src/selector.h"
 
-//PID regulator implementation to manage line alignment and obstacles
+
+/*
+*	PID regulator implementation to manage line alignment
+*	
+*	params :
+*	uint16_t distance		position	
+*   uint16_t goal    		command (goal position)
+*   _Bool    reset 			used to reset sum_error (reset I contribution)		
+*   
+*/
 int16_t pid_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 
 	int16_t error = 0;
@@ -57,9 +66,16 @@ int16_t pid_regulator(uint16_t distance, uint16_t goal, _Bool reset){
     return speed;
 }
 
-
-//state 1 = switch on led, state 0 = switch off 
-void gerer_led(int8_t mode, unsigned int state) //uin8_t ?
+/*
+*	LED change in the main finite state machine, 
+*   in order to better understand what does the robot
+*	
+*	params :
+*	int8_t   mode			state variable determining LED states	
+*   uint8_t  state    		1 = switch on led, 0 = switch off 	
+*   
+*/
+void gerer_led(int8_t mode, uint8_t state)
 {
 	switch(mode)
 	{
@@ -70,8 +86,8 @@ void gerer_led(int8_t mode, unsigned int state) //uin8_t ?
 
 	    case DEMI_TOUR:
 	    //switch 2 back RGB LED (in RED here)
-			set_rgb_led(LED4,(state * 200),0,0); 
-			set_rgb_led(LED6,(state *200),0,0);
+			set_rgb_led(LED4,(state * RED_R),0,0); 
+			set_rgb_led(LED6,(state * RED_R),0,0);
 			break;
 
 	    case OBSTACLE:
@@ -81,20 +97,18 @@ void gerer_led(int8_t mode, unsigned int state) //uin8_t ?
 
 	    case ATTAQUE:
 	    //switch 4 RGB LED in orange
-	    //rgb(255,165,0)
-	      	set_rgb_led(LED2,(state*255),(state*165),0);
-	        set_rgb_led(LED4,(state*255),(state*165),0);
-        	set_rgb_led(LED6,(state*255),(state*165),0);
-	        set_rgb_led(LED8,(state*255),(state*165),0);
+	      	set_rgb_led(LED2,(state*ORANGE_R),(state*ORANGE_G),0);
+	        set_rgb_led(LED4,(state*ORANGE_R),(state*ORANGE_G),0);
+        	set_rgb_led(LED6,(state*ORANGE_R),(state*ORANGE_G),0);
+	        set_rgb_led(LED8,(state*ORANGE_R),(state*ORANGE_G),0);
 	       	break;
 
         case INTERSECTION:
 	    //switch 4 RGB LED in blue
-	    //rgb(30,144,255), magic numbers
-	        set_rgb_led(LED2,(state*30),(state*144),(state*255));
-	        set_rgb_led(LED4,(state*30),(state*144),(state*255));
-        	set_rgb_led(LED6,(state*30),(state*144),(state*255));
-	        set_rgb_led(LED8,(state*30),(state*144),(state*255));
+	        set_rgb_led(LED2,(state*BLUE_R),(state*BLUE_G),(state*BLUE_B));
+	        set_rgb_led(LED4,(state*BLUE_R),(state*BLUE_G),(state*BLUE_B));
+        	set_rgb_led(LED6,(state*BLUE_R),(state*BLUE_G),(state*BLUE_B));
+	        set_rgb_led(LED8,(state*BLUE_R),(state*BLUE_G),(state*BLUE_B));
 	        break;
 
 	    case CHOIX_CHEMIN:
@@ -111,7 +125,14 @@ void gerer_led(int8_t mode, unsigned int state) //uin8_t ?
 	}
 }
 
-//comments
+/*
+*	LED change mangagement for the main finite state machine
+*   in order to better understand what does the robot
+*	
+*	params :
+*	int8_t   mode			state variable determining LED states		
+*   
+*/
 void mode_led(int8_t mode)
 {
 	static int8_t ancien_mode = NORMAL;
@@ -130,7 +151,16 @@ void mode_led(int8_t mode)
 	}
 }
 
-void gerer_led_inter(int8_t dir, unsigned int state)
+/*
+*	LED change in the direction finite state machine, 
+*   in order to better understand where the robot goes
+*	
+*	params :
+*	int8_t   dir			state variable determining LED states	
+*   uint8_t  state    		1 = switch on led, 0 = switch off 	
+*   
+*/
+void gerer_led_inter(int8_t dir, uint8_t state)
 {
 	switch(dir)
 	{
@@ -141,8 +171,8 @@ void gerer_led_inter(int8_t dir, unsigned int state)
 
 	    case FRONT:
 	    //switch 2 front RGB LED (in RED here)
-			set_rgb_led(LED2,(state*200),0,0);
-			set_rgb_led(LED8,(state*200),0,0);
+			set_rgb_led(LED2,(state*RED_R),0,0);
+			set_rgb_led(LED8,(state*RED_R),0,0);
 			break;
 
 	    case LEFT:
@@ -160,7 +190,14 @@ void gerer_led_inter(int8_t dir, unsigned int state)
 	}
 }
 
-
+/*
+*	LED change management in the direction finite state machine, 
+*   in order to better understand where the robot goes
+*	
+*	params :
+*	int8_t   dir			state variable determining LED states		
+*   
+*/
 void mode_inter_led(int8_t dir)
 {
 	static uint8_t ancienne_dir = RIGHT;
@@ -175,6 +212,16 @@ void mode_inter_led(int8_t dir)
 	ancienne_dir = dir;
 }
 
+
+/*
+*	Direction Finite State Machine
+*	Find the first path available in the order of priority: 
+*   Right, Front, Left, Back
+*	
+*	params :
+*	int16_t*   vitesse_rotation		decide direction/speed		
+*   
+*/
 _Bool choix_chemin(int16_t* vitesse_rotation)
 {
 
@@ -278,6 +325,15 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 	return chemin_trouve;
 }
 
+/*
+*	Main Finite State Machine
+*   Decide the behavior of the robot
+*   depending on its environment
+*	
+*	params :
+*   -
+*   
+*/
 static THD_WORKING_AREA(waRob_management, 256);
 static THD_FUNCTION(Rob_management, arg) {
 
@@ -483,7 +539,7 @@ static THD_FUNCTION(Rob_management, arg) {
         		{
               		speed=0;
         		}
-        		if(ambient_light < MIN_AMBIENT_L) mode = NORMAL; //high ambient light (inverse scale)
+        		if(ambient_light < MIN_AMBIENT_L) mode = NORMAL; //if high ambient light (inverse scale)
    				break;
 
         	default:

@@ -39,22 +39,35 @@ typedef enum {
 #define N3				3 //Nb of examples of class 3
 #define N4				3 //Nb of examples of class 4
 
-//needed to normalise input data
+//needed to normalize input data
 #define DATA_NORM		70000
 
 // 4 classes, C_BACK to avoid conflict w/ direction in main.h
 enum{VOID=1,SPEAK,GO,C_BACK};
 
-//begins to analyse audio data (FFT + PNN)
+/*
+*	Begins to analyse audio data (FFT + PNN) in processAudioData
+*/
 void active_audio_processing(void);
 
-//stops to analyse audio data (FFT + PNN)
+/*
+*	Stops to analyse audio data (FFT + PNN) in processAudioData
+*/
 void desactive_audio_processing(void);
 
-//exports the result of analysis (0 = nothing, GO, C_BACK)
+/*
+*	Exports the result of analysis (0 = nothing, GO, C_BACK)
+*/
 int8_t return_vocal_command(void);
 
-//main analysis of sound (FFT/PNN)
+/*
+*	Callback function, main analysis of sound (FFT/PNN)
+*
+*	params :
+*	int16_t *data			Buffer containing 4 times 160 samples. the samples are sorted by micro
+*							so we have [micRight1, micLeft1, micBack1, micFront1, micRight2, etc...]
+*	uint16_t num_samples	Tells how many data we get in total (should always be 640)
+*/
 void processAudioData(int16_t *data, uint16_t num_samples);
 
 /*

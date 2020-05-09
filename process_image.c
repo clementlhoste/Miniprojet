@@ -8,16 +8,21 @@
 #include <camera/po8030.h>
 #include <process_image.h>
 
-
-static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	//initialization of the line position at the middle of the camera range
+//initialization of the line position at the middle of the camera range
+static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	
 static uint16_t line_width = 0;
-float std_dev = 0;
+static float std_dev = 0;
 
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
 /*
  *  Returns the line's width extracted from the image buffer given
  *  Returns 0 if line not found
+ *
+ *  param:
+ *  /*
+ *	uint8_t *buffer			Buffer containing intensity values of an image
+ *
  */
 uint16_t extract_line_width(uint8_t *buffer)
 {
@@ -108,8 +113,13 @@ uint16_t extract_line_width(uint8_t *buffer)
 	}
 }
 
+
 /*
- */
+*	Thread to capture an image using the camera
+*	
+*	param :
+*	-
+*/
 static THD_WORKING_AREA(waCaptureImage, 256);
 static THD_FUNCTION(CaptureImage, arg) {
 
@@ -134,7 +144,12 @@ static THD_FUNCTION(CaptureImage, arg) {
 }
 
 /*
- */
+*	Thd use to analyse the last picture taken by the camera,
+*   update the line_position/std_dev using extract_line()
+*	
+*	param :
+*	-
+*/
 static THD_WORKING_AREA(waProcessImage, 1024);
 static THD_FUNCTION(ProcessImage, arg) {
 

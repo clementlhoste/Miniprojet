@@ -34,13 +34,16 @@ static _Bool process_active = FALSE;
 static int8_t vocal_command  = 0;
 
 
-
-//Probablistic Neural Network
-//This fonction was adapted from https://easyneuralnetwork.blogspot.com/2015/01/probabilistic-neural-network.html
-// C is the number of classes, N is the number of examples, Nk are from class k
-// d is the dimensionality of the training examples, sigma is the smoothing factor
-// test_example[d] is the example to be classified
-// Examples[N][d] are the training examples
+/*
+*	Probablistic Neural Network
+*	This fonction was adapted from https://easyneuralnetwork.blogspot.com/2015/01/probabilistic-neural-network.html
+*
+*	params :
+*	C is the number of classes, N is the number of examples, Nk are from class k
+* 	d is the dimensionality of the training examples, sigma is the smoothing factor
+* 	test_example[d] is the example to be classified
+* 	Examples[N][d] are the training examples
+*/
 uint8_t pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d], const float examples[N][d])
 {
 	uint8_t classify = -1;
@@ -97,8 +100,14 @@ uint8_t pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d],
 	return classify;
 }
 
-//allows to export FFT values, using the catpure tool of Real Term, into a .txt
-//can be used directly in Excel to easily analyse data
+
+/*
+*	Allows to export FFT values, using the catpure tool of Real Term, into a .txt
+*	can be used directly in Excel to easily analyse data
+*	
+*	params :
+*	int16_t *data			Buffer containing FFT results
+*/
 void extract_FFT(float* data)
 {
 	chprintf((BaseSequentialStream *) &SDU1, "%f;",data[FREQ1_L]);
@@ -112,9 +121,14 @@ void extract_FFT(float* data)
 	chprintf((BaseSequentialStream *) &SDU1, "%f \n",data[FREQ5_H]);
 }
 
+
+
+///////////////// PUBLIC FUNCTIONS /////////////////
+
 /*
 *	Callback called when the demodulation of the four microphones is done.
 *	We get 160 samples per mic every 10ms (16kHz)
+*   FFT and PNN Analysis, to determine if a keyword (Go/Back) was pronounced
 *	
 *	params :
 *	int16_t *data			Buffer containing 4 times 160 samples. the samples are sorted by micro
@@ -173,6 +187,8 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 
 			//this is the data we will give as input in the PNN, after normalization
 			float test_example[NB_FREQ];
+
+			//fill the vector
 			test_example[0] = (micLeft_output[FREQ1_L] + micLeft_output[FREQ1_H])/(2*DATA_NORM);
 			test_example[1] = micLeft_output[FREQ2]/DATA_NORM;
 			test_example[2] = (micLeft_output[FREQ3_L] + micLeft_output[FREQ3_H])/(2*DATA_NORM);
@@ -180,7 +196,7 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			test_example[4] = (micLeft_output[FREQ5_L] + micLeft_output[FREQ5_H])/(2*DATA_NORM);
 		
 			//we give parameters to PNN, plus an array with input FFT verctor (test_example) to be classified
-			//the examples matrix contains examples of each class
+			//the example matrix contains examples of each class
 			uint8_t class = 0;
 			class = pnn(NB_CLASSES, NB_EXEMPLES, NB_FREQ, SMOOTHING, test_example, examples);
 
@@ -199,10 +215,7 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 }
 
 
-
-///////////// PUBLIC FUNCTIONS ///////////// 
-
-//eexports the name of the buffers (only left mic used)
+//exports the name of the buffers (only left mic used)
 float* get_audio_buffer_ptr(BUFFER_NAME_t name)
 {
 	if(name == LEFT_CMPLX_INPUT){

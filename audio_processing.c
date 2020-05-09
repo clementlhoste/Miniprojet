@@ -6,8 +6,9 @@
 
 #include <audio/microphone.h>
 #include <audio_processing.h>
-#include <fft.h>
+
 #include <arm_math.h>
+#include <arm_const_structs.h>
 
 //2 times FFT_SIZE because these arrays contain complex numbers (real + imaginary)
 static float micLeft_cmplx_input[2 * FFT_SIZE];
@@ -16,18 +17,18 @@ static float micLeft_cmplx_input[2 * FFT_SIZE];
 static float micLeft_output[FFT_SIZE];
 
 //Examples of each class, used to feed the PNN, and to help to classify each input (FFT vector)
-static float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497},  //VOID
-												{0.025389122,0.022923238,0.008571391,0.013912240,0.011094523},	//SPEAK
-												{0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},  //SPEAK
-												{0.238694565,0.048119511,0.021042294,0.026486421,0.013906452},	//SPEAK
-												{0.077949966,0.023574965,0.009795453,0.013051499,0.010085111},	//SPEAK
-												{0.525953696,0.076893209,0.012715966,0.018951827,0.013572355},	//GO
-												{0.233461892,0.074033011,0.016969792,0.022156961,0.021261356},	//GO
-												{0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},	//GO
-												{0.380157995,0.093555187,0.109508464,0.039939089,0.034523986}, 	//BACK
-												{0.175174589,0.058576963,0.033547497,0.026109697,0.015954384},	//BACK
-												{0.176715207,0.052898307,0.040889834,0.033202053,0.017457846} 	//BACK
-											   };
+static const float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497},  	//VOID
+													  {0.025389122,0.022923238,0.008571391,0.013912240,0.011094523},	//SPEAK
+													  {0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},  	//SPEAK
+													  {0.238694565,0.048119511,0.021042294,0.026486421,0.013906452},	//SPEAK
+													  {0.077949966,0.023574965,0.009795453,0.013051499,0.010085111},	//SPEAK
+													  {0.525953696,0.076893209,0.012715966,0.018951827,0.013572355},	//GO
+													  {0.233461892,0.074033011,0.016969792,0.022156961,0.021261356},	//GO
+													  {0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},	//GO
+													  {0.380157995,0.093555187,0.109508464,0.039939089,0.034523986}, 	//BACK
+													  {0.175174589,0.058576963,0.033547497,0.026109697,0.015954384},	//BACK
+													  {0.176715207,0.052898307,0.040889834,0.033202053,0.017457846} 	//BACK
+											  		};
 
 static _Bool process_active = FALSE;
 static int8_t vocal_command  = 0;
@@ -40,7 +41,7 @@ static int8_t vocal_command  = 0;
 // d is the dimensionality of the training examples, sigma is the smoothing factor
 // test_example[d] is the example to be classified
 // Examples[N][d] are the training examples
-int pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d], float examples[N][d])
+uint8_t pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d], const float examples[N][d])
 {
 	uint8_t classify = -1;
 	float largest = 0;
@@ -72,7 +73,7 @@ int pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d], flo
 		// for each example from the particular class k
 		for (uint8_t i=0; i<Nk; i++)
 		{
-			double product = 0;
+			float product = 0;
 			// The PATTERN layer that multiplies the test example by the weights
 			for (uint8_t j=0; j<d; j++)
 			{
@@ -84,7 +85,7 @@ int pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d], flo
 		}
 		sum[k] /= Nk;
 	}
-	//choose the largest "probability"
+	//OUTPUT layer wich choose the largest "probability"
 	for (uint8_t k=1; k<=C; k++)
 	{
 		if (sum[k] > largest)
@@ -153,10 +154,10 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			/*	FFT proccessing
 			*
 			*	This FFT function stores the results in the input buffer given.
-			*	This is an "In Place" function. 
+			*	Very optimized fft function provided by ARM
+			*	which uses a lot of tricks to optimize the computations
 			*/
-
-			doFFT_optimized(FFT_SIZE, micLeft_cmplx_input);
+			arm_cfft_f32(&arm_cfft_sR_f32_len1024, micLeft_cmplx_input, 0, 1);
 
 			/*	Magnitude processing
 			*
@@ -201,7 +202,7 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 
 ///////////// PUBLIC FUNCTIONS ///////////// 
 
-
+//eexports the name of the buffers (only left mic used)
 float* get_audio_buffer_ptr(BUFFER_NAME_t name)
 {
 	if(name == LEFT_CMPLX_INPUT){
@@ -215,13 +216,13 @@ float* get_audio_buffer_ptr(BUFFER_NAME_t name)
 	}
 }
 
-// begin the analysis of sound samples (FFT + PNN)
+// begins the analysis of sound samples (FFT + PNN)
 void active_audio_processing(void)
 {
 	process_active = TRUE;
 }
 
-// stop the analysis of sound samples (FFT + PNN)
+// stops the analysis of sound samples (FFT + PNN)
 void desactive_audio_processing(void)
 {
 	process_active = FALSE;

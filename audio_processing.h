@@ -54,13 +54,8 @@ void desactive_audio_processing(void);
 //exports the result of analysis (0 = nothing, GO, C_BACK)
 int8_t return_vocal_command(void);
 
-
+//main analysis of sound (FFT/PNN)
 void processAudioData(int16_t *data, uint16_t num_samples);
-
-/*
-*	put the invoking thread into sleep until it can process the audio datas
-*/
-void wait_send_to_computer(void);
 
 /*
 *	Returns the pointer to the BUFFER_NAME_t buffer asked

@@ -13,14 +13,14 @@ static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	//initialization of the lin
 static uint16_t line_width = 0;
 float std_dev = 0;
 
-//semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
 /*
  *  Returns the line's width extracted from the image buffer given
  *  Returns 0 if line not found
  */
-uint16_t extract_line_width(uint8_t *buffer){
+uint16_t extract_line_width(uint8_t *buffer)
+{
 
 	uint16_t i = 0, begin = 0, end = 0, width = 0;
 	uint8_t stop = 0, wrong_line = 0, line_not_found = 0;
@@ -35,12 +35,12 @@ uint16_t extract_line_width(uint8_t *buffer){
 	mean /= IMAGE_BUFFER_SIZE;
 
 	//performs a standard deviation
-	for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i++) //interest in a small window mid +/- 100
+	for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i++)
 	{
 		std_dev += (buffer[i]-mean)*(buffer[i]-mean);
 	}
-		std_dev /= IMAGE_BUFFER_SIZE;
-		std_dev = sqrt(std_dev);
+	std_dev /= IMAGE_BUFFER_SIZE;
+	std_dev = sqrt(std_dev);
 
 	do{
 		wrong_line = 0;
@@ -124,7 +124,7 @@ static THD_FUNCTION(CaptureImage, arg) {
 
     while(1){
 
-    	//starts a capture
+    //starts a capture
 	dcmi_capture_start();
 	//waits for the capture to be done
 	wait_image_ready();
@@ -148,7 +148,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
     while(1)
     {
-    		//waits until an image has been captured
+    	//waits until an image has been captured
         chBSemWait(&image_ready_sem);
 
         if (init) init = FALSE;
@@ -168,6 +168,9 @@ static THD_FUNCTION(ProcessImage, arg) {
 		line_width = extract_line_width(image);
     }
 }
+
+
+//////////////////// PUBLIC FONCTIONS //////////////////// 
 
 uint16_t get_line_width(void)
 {

@@ -12,7 +12,7 @@
 #include "../lib/e-puck2_main-processor/src/selector.h"
 
 //PID regulator implementation to manage line alignment and obstacles
-int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
+int16_t pid_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 
 	int16_t error = 0;
 	int16_t speed = 0;
@@ -31,7 +31,7 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 	error = (int)distance - (int)goal;
 
 
-	//disables the PI regulator if the error is to small
+	//disables the PID regulator if the error is to small
 	//this avoids to always move as we cannot exactly be aligned and the camera is a bit noisy
 	if(fabs(error) < ERROR_THRESHOLD){
 		return 0;
@@ -46,7 +46,7 @@ int16_t pi_regulator(uint16_t distance, uint16_t goal, _Bool reset){
 		sum_error = -MAX_SUM_ERROR_L;
 	}
 
-	//activate the Kd coefficient only if error_pre exist
+	//activate the Kd coefficient only if error_pre exists
 	if(error_pre)
 		speed = KPL * error + KIL * sum_error + KDL*(error-error_pre);
 	else
@@ -118,12 +118,12 @@ void mode_led(int8_t mode)
 
 	if(mode != ancien_mode)
 	{
-		//�teindre les anciennes LEDS avec ancien_mode
+		//switch off last "mode" corresponding LEDs
 		gerer_led(ancien_mode, 0);
 		
-		if(mode != CHOIX_CHEMIN) //cas dans gerer_led_inter()
+		if(mode != CHOIX_CHEMIN) //case corresponding to gerer_led_inter()
 		{	
-			//allumer les nouvelles avec mode
+			//switch on new "mode" corresponding LEDs
 			gerer_led(mode, 1);
 		}
 		ancien_mode = mode;
@@ -167,9 +167,9 @@ void mode_inter_led(int8_t dir)
 
 	if(dir != ancienne_dir)
 	{
-		//�teindre les anciennes LEDS avec ancienne_dir
+		//switch off last "dir" corresponding LEDs
 		gerer_led_inter(ancienne_dir, 0);
-		//allumer les nouvelles avec mode
+		//switch on new "dir" corresponding LEDs
 		gerer_led_inter(dir, 1);
 	}
 	ancienne_dir = dir;
@@ -184,18 +184,17 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 
 	switch(recherche_chemin)
 	{
-		case RIGHT: //Dans un premier temps vérifie s'il ya un chemin à droite de l'intersection, si oui y va
+		case RIGHT: //AT first, check if there is a path on the right
 
 			*vitesse_rotation = VITESSE_ROT_CHEMIN;
 
-			//300 correspond à (PERIMETER_EPUCK*CONV_CM2STEP/4+1) et considérations empiriques pour bien touner à 90°
-			if((abs(left_motor_get_pos()) >= 315) && (abs(right_motor_get_pos()) >= 315)) //MAGIC NB
+			if((abs(left_motor_get_pos()) >= STEPS_Q_TURN) && (abs(right_motor_get_pos()) >= STEPS_Q_TURN)) //quarter turn
 			{
 				*vitesse_rotation = 0;
-				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
+				if(compteur++ >= W_CALCUL_INT) //wait to get new calculations
 				{
 					compteur = 0;
-					if(get_std_dev() > 18) //MAGIC NB
+					if(get_std_dev() > MIN_STD_LINE)
 					{		
 						chemin_trouve = TRUE; //path selected
 					}
@@ -209,17 +208,17 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			}
 			break;
 
-		case FRONT:
+		case FRONT: //if not, check front
 
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
-			if((abs(left_motor_get_pos()) >= 315) && (abs(right_motor_get_pos()) >= 315)) //MAGIC NB
+			if((abs(left_motor_get_pos()) >= STEPS_Q_TURN) && (abs(right_motor_get_pos()) >= STEPS_Q_TURN)) //quarter turn, change dir
 			{
 				*vitesse_rotation = 0;
 
-				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
+				if(compteur++ >= W_CALCUL_INT) //wait to get new calculations
 				{
 					compteur = 0;
-					if(get_std_dev() > 18)  //MAGIC NB
+					if(get_std_dev() > MIN_STD_LINE) 
 					{
 						recherche_chemin = RIGHT; //reset for next one
 						chemin_trouve = TRUE; //path selected
@@ -230,17 +229,17 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			}
 			break;
 
-		case LEFT:
+		case LEFT: //if not check left
 
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
-			if((abs(left_motor_get_pos()) >= 630) && (abs(right_motor_get_pos()) >= 630)) //MAGIC NB
+			if((abs(left_motor_get_pos()) >= (STEPS_Q_TURN*2)) && (abs(right_motor_get_pos()) >= (STEPS_Q_TURN*2))) //new quarter turn
 			{
 				*vitesse_rotation = 0;
 
-				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
+				if(compteur++ >= W_CALCUL_INT) //wait to get new calculations
 				{
 					compteur = 0;
-					if(get_std_dev() > 18) //MAGIC NB
+					if(get_std_dev() > MIN_STD_LINE)
 					{
 						recherche_chemin = RIGHT; //reset for next one
 						chemin_trouve = TRUE; //path selected
@@ -251,14 +250,14 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			}
 			break;
 
-		case BACK:
+		case BACK: //no path found, U turn
 
 			*vitesse_rotation = -VITESSE_ROT_CHEMIN;
-			if((abs(left_motor_get_pos()) >= 980) && (abs(right_motor_get_pos()) >= 980)) //MAGIC NB
+			if((abs(left_motor_get_pos()) >= STEPS_BACK) && (abs(right_motor_get_pos()) >= STEPS_BACK)) //approx 3 quarter turn (exp. value)
 			{
 				*vitesse_rotation = 0;
 
-				if(compteur++ >= 20) // attente d'avoir une nouvelle image et un process
+				if(compteur++ >= W_CALCUL_INT) //wait to get new calculations
 				{
 					compteur = 0;
 
@@ -273,7 +272,9 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR choix chemin");
 			chemin_trouve = FALSE;
 	}
+	//change LED depending on the direction
 	mode_inter_led(recherche_chemin);
+
 	return chemin_trouve;
 }
 
@@ -283,110 +284,107 @@ static THD_FUNCTION(Rob_management, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
-    //a commenter plus tard
     systime_t time;
 
-    int16_t speed = 0;
-    int16_t speed_correction = 0;
-
+    int16_t speed = 0, speed_correction = 0;
+    uint16_t distance_mm;       //distance of the detected obstacle from the robot thanks to the TOF
+	int8_t  vocal_command = 0;  // 0/GO/C_BACK
+	float ambient_light = 0.0, std_dev = 0.0;
+	_Bool intersection = FALSE, blanc = FALSE;
 
     //demo varaiable is a state variable used to determine which part of the demonstration we are proceeding
-    //DEMO1 : line alignment, robot moving through the maze, displacement algorithm, management of obstacles as walls
-    //DEMO2 : same but now the robot can go through obstacles like a battering ram
-    //DEMO3 : the synthesis of DEMO1/2, robot is using voice recognition to deal with osbstacles using go/back command
     static int8_t demo = DEMO1;
 
     //mode variable is a state variable used to adapt the epuck2 behavior
     static int8_t mode = NORMAL;
 
-    gerer_led(NORMAL,1); //init les LEDS
+    static uint8_t compteur_int = 0, compteur_bl  = 0, compteur_dt  = 0, compteur_obst = 0;
+
+    gerer_led(NORMAL,1); //LED initialization
  
     while(1){
         time = chVTGetSystemTime();
-        
-		//plus condens�s?
-        static uint8_t compteur_int = 0;
-        static uint8_t compteur_bl  = 0;
-        static uint8_t compteur_dt  = 0;
-        static uint8_t compteur_obst = 0;
-
-        int8_t  vocal_command = 0;
 
         //Mode change, using selector	
     	demo = get_selector()%NB_DEMOS;
 
     	//MAGIC NB
-        float ambient_light = (get_ambient_light(2)+get_ambient_light(5)+get_ambient_light(1)+get_ambient_light(6) + get_ambient_light(0) + get_ambient_light(7))/6;//magic nb
+        ambient_light = (get_ambient_light(PROXI_R)+get_ambient_light(PROXI_L)+get_ambient_light(PROXI_FR45)
+        				+get_ambient_light(PROXI_FL45) + get_ambient_light(PROXI_FR) + get_ambient_light(PROXI_FL))/NB_PROXIS;
 
-       //toujours besoin de std_dev?
-        float std_dev = get_std_dev(); //performs standard deviation on the image from the camera
-        _Bool intersection = (std_dev <= MAX_STD_INTER); //cross-roads detected
-        _Bool blanc = ((std_dev > MAX_STD_INTER)&&(std_dev < MAX_STD_WHITE)); //end of the line
-
-        //distance_mm gives the distance of the detected obstacle from the robot thanks to the TOF
-        uint16_t distance_mm;
         distance_mm = VL53L0X_get_dist_mm();
 
         switch(mode)
         {
         	case NORMAL: //move forward following the line with a PID
         		 
-        		speed = SPEED_DE_CROISIERE;
-				speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0); // ne pas l'appeller tout le temps
+        		std_dev = get_std_dev(); //performs standard deviation on the image from the camera
+        		intersection = (std_dev <= MAX_STD_INTER); //cross-roads detected
+       			blanc = ((std_dev > MAX_STD_INTER)&&(std_dev < MAX_STD_WHITE)); //end of the line
 
-        		//if the line is nearly in front of the camera, don't rotate
-        		if(abs(speed_correction) < ROTATION_THRESHOLD || speed == 0){
-        	       	speed_correction = 0;
-        		}
-
-        		//si distance est initialise (different de 0)
-        		if(distance_mm && (distance_mm < GOAL_DISTANCE)) //si on est dans demo 2 et obstacle détecté on rentre en mode obstacle
+        		//if the distance is well initialized (not 0)
+        		if(distance_mm && (distance_mm < GOAL_DISTANCE)) //DEMO 2 and obsctale detected
         		{
         			compteur_bl = 0;
         			compteur_int = 0;
+        			speed = 0;
+        			speed_correction = 0;
         			if(demo) mode = OBSTACLE;
         			else
         			{
         				left_motor_set_pos(0);
         				right_motor_set_pos(0);
-        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
+        				pid_regulator(0, 0, 1); //reset sum_error term
         				mode = DEMI_TOUR;
         			}
         		}
-        		else if (ambient_light > 3350 && blanc) //small ambient light and end of line
+        		else if (ambient_light > MAX_AMBIENT_L && blanc) //small ambient light (inverse scale) and end of line
         		{
+        			speed = 0;
+        			speed_correction = 0;
         			left_motor_set_pos(0);
         			right_motor_set_pos(0);
         			mode = END;
         		}
-        		else if(intersection)
+        		else if(intersection) //crossroad detected
         		{
         			speed = 0;
         			speed_correction = 0;
-        			if(compteur_int++ >= 10)
+        			if(compteur_int++ >= CT_INTERSECTION) // be more precise in the detection (multiple values)
         			{
         				compteur_int = 0;
         				compteur_bl  = 0;
-        				mode = INTERSECTION;
-        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
+        				pid_regulator(0, 0, 1); //reset sum_error term
         	   			left_motor_set_pos(0);
               			right_motor_set_pos(0);
+              			mode = INTERSECTION;
            			}
         		}
-        		else if(blanc)
+        		else if(blanc) //end of line detected
         		{
         			speed = 0;
         			speed_correction = 0;
-        			if(compteur_bl++ >= 11) // attente d'avoir plusieurs valeurs de std
+        			if(compteur_bl++ >= CT_BLANC) // be more precise in the detection (multiple values)
         			{
         				compteur_bl  = 0;
         				compteur_int = 0;
        					left_motor_set_pos(0);
         				right_motor_set_pos(0);
-        				pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
+        				pid_regulator(0, 0, 1); //reset sum_error term
         				mode = DEMI_TOUR;
         			}
 
+        		}
+        		else //stay in NORMAL and apply pid regulation
+        		{
+        			speed = SPEED_DE_CROISIERE;
+					speed_correction = pid_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0);
+
+        			//if the line is nearly in front of the camera, don't rotate
+        			if(abs(speed_correction) < ROTATION_THRESHOLD)
+        			{
+        	       		speed_correction = 0;
+        			}
         		}
         		break;
 
@@ -395,11 +393,11 @@ static THD_FUNCTION(Rob_management, arg) {
 				speed = 0;
 				speed_correction = VITESSE_ROT_CHEMIN;
 
-				if((abs(left_motor_get_pos()) >= 660) && (abs(right_motor_get_pos()) >= 660))
+				if((abs(left_motor_get_pos()) >= STEPS_U_TURN) && (abs(right_motor_get_pos()) >= STEPS_U_TURN))
 				{
 					speed_correction = 0;
 
-					if(compteur_dt++ >= 20) // attente d'avoir une nouvelle image et un process
+					if(compteur_dt++ >= W_CALCUL_INT) // wait to get new caclulations (little break)
 					{
 						compteur_dt = 0;
 						mode = NORMAL;
@@ -412,13 +410,13 @@ static THD_FUNCTION(Rob_management, arg) {
 
         		speed = -SPEED_DE_CROISIERE;
         		speed_correction = 0;
-        		if(distance_mm >= DISTANCE_CHARGE || compteur_obst) //avoid distance noise in vocal command
+        		if(distance_mm >= RUN_DISTANCE || compteur_obst) //avoid distance noise in vocal command
         		{
         			speed = 0;
         			speed_correction = 0;
         			left_motor_set_pos(0);
         			right_motor_set_pos(0);
-        			pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
+        			pid_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1);
         			if(demo == DEMO2)
         				mode = ATTAQUE;
         			else //mode DEMO3
@@ -446,7 +444,7 @@ static THD_FUNCTION(Rob_management, arg) {
 
     			speed_correction = 0;
         		speed = VITESSE_CHARGE;
-        		if(distance_mm >= 110 && left_motor_get_pos()>= 11*CONV_CM2STEP && right_motor_get_pos()>= 11*CONV_CM2STEP)
+        		if(distance_mm >= PAST_O_DISTANCE && left_motor_get_pos()>= (STEPS_ATTAQUE) && right_motor_get_pos()>= (STEPS_ATTAQUE))
         		{
 
         			mode = NORMAL;
@@ -457,12 +455,12 @@ static THD_FUNCTION(Rob_management, arg) {
 
         		speed = VITESSE_APPROCHE_INT;
         		speed_correction = 0;
-        		if(left_motor_get_pos()>= 350 && right_motor_get_pos()>= 350) // 1.5*CONV_CM2STEP MAGIC NB
+        		if(left_motor_get_pos()>= STEPS_INTER && right_motor_get_pos()>= STEPS_INTER)
         		{
-        			speed=0;
+        			speed = 0;
         			left_motor_set_pos(0);
         			right_motor_set_pos(0);
-        			gerer_led_inter(RIGHT, 1); //init LEDs
+        			gerer_led_inter(RIGHT, 1); //LEDs init
         			mode = CHOIX_CHEMIN;
         		}
         		break;
@@ -473,19 +471,19 @@ static THD_FUNCTION(Rob_management, arg) {
         		if(choix_chemin(&speed_correction))
         		{
         			mode = NORMAL;
-        			speed_correction = pi_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 1); //reset
+        			pid_regulator(0, 0, 1); //reset sum_error term
         		}
         		break;
 
-        	case END: //detects the end of the demo, has entered his house!
+        	case END: //detects the end of the demo, robot has entered his house!
 
         		speed = SPEED_DE_CROISIERE;
         		speed_correction = 0;
-        		if(left_motor_get_pos()>= (350*1.5) && right_motor_get_pos()>= (350*1.5)) // 1.5*CONV_CM2STEP MAGIC NB
+        		if(left_motor_get_pos()>= (STEPS_HOUSE) && right_motor_get_pos()>= (STEPS_HOUSE))
         		{
               		speed=0;
         		}
-        		if(ambient_light < 3400) mode = NORMAL;
+        		if(ambient_light < MIN_AMBIENT_L) mode = NORMAL; //high ambient light (inverse scale)
    				break;
 
         	default:
@@ -496,13 +494,17 @@ static THD_FUNCTION(Rob_management, arg) {
        	mode_led(mode);
 
         //applies the speed from the PID regulator and the correction for the rotation
-        right_motor_set_speed(speed - ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
-        left_motor_set_speed(speed + ROTATION_COEFF*speed_correction); //ROTATION_COEFF * à enlever si PID
+        right_motor_set_speed(speed - ROTATION_COEFF*speed_correction);
+        left_motor_set_speed(speed + ROTATION_COEFF*speed_correction);
 
-        //10Hz soit 100ms d'attente
+        //10Hz so waits 100ms
         chThdSleepUntilWindowed(time, time + MS2ST(10));
     }
 }
+
+
+///////////// PUBLIC FUNCTIONS /////////////
+
 
 void rob_management_start(void){
 	chThdCreateStatic(waRob_management, sizeof(waRob_management), NORMALPRIO+10, Rob_management, NULL);

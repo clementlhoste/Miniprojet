@@ -2,6 +2,7 @@
 #include "hal.h"
 
 #include <main.h>
+#include <math.h>
 #include <camera/po8030.h>
 #include <process_image.h>
 

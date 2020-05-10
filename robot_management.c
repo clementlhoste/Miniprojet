@@ -59,7 +59,7 @@
 #define STEPS_BACK				980					 // [steps] Experimentally determined value the back direction in Intersection
 
 //counters
-#define CT_INTERSECTION			10				// help to be more precise in the color detection
+#define CT_INTERSECTION			10				// helps to be more precise in the color detection
 #define CT_BLANC				11				// limits the error
 #define CT_OBSTACLE				100				// waits in order to avoid the analysis of motor noise
 

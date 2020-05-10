@@ -7,10 +7,10 @@
 ///////////// CONSTANT DEFINES /////////////
 
 //Colors, RGB values
-#define RED_R					200				// rgb(200,0,0)
-#define ORANGE_R				255				// rgb(255,165,0)
+#define RED_R					200		// rgb(200,0,0)
+#define ORANGE_R				255		// rgb(255,165,0)
 #define ORANGE_G				165
-#define BLUE_R					30				// rgb(30,144,255)
+#define BLUE_R					30		// rgb(30,144,255)
 #define BLUE_G					144
 #define BLUE_B					255
 

@@ -43,7 +43,7 @@ static float micLeft_cmplx_input[2 * FFT_SIZE];
 static float micLeft_output[FFT_SIZE];
 
 //Examples of each class, used to feed the PNN, and to help to classify each input (FFT vector)
-static const float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497}, 	 //VOID
+static const float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497}, 	//VOID
 													  {0.025389122,0.022923238,0.008571391,0.013912240,0.011094523},	//SPEAK
 													  {0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},  	//SPEAK
 													  {0.238694565,0.048119511,0.021042294,0.026486421,0.013906452},	//SPEAK

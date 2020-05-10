@@ -48,18 +48,21 @@ enum {DEMO1, DEMO2, DEMO3, NB_DEMOS};
 #define NB_PROXIS				6
 
 //Distance and Rotation constants
-#define RUN_DISTANCE			100 			// [mm] Set-back distance before breaking down an obstacle (demo 2)
-#define PAST_O_DISTANCE			RUN_DISTANCE+10	// [mm] Distance where we know he have passed the obstacle
-#define STEPS_INTER				350				// [steps] Experimentally dertermined value
-#define STEPS_HOUSE				1.5*STEPS_INTER	// [steps] Experimentally dertermined value
-#define STEPS_ATTAQUE			11*CONV_CM2STEP // [steps] Experimentally dertermined value
-#define STEPS_U_TURN			660				// [steps] Experimentally dertermined value for U turn
-#define STEPS_Q_TURN			315				// [steps] Experimentally dertermined value for Quarter turn (Intersection)
-#define STEPS_BACK				980				// [steps] Experimentally dertermined value the back direction in Intersection
+#define PERIMETER_EPUCK			13                   // [cm]
+#define CONV_CM2STEP			1000/PERIMETER_EPUCK // [step/cm]
+#define GOAL_DISTANCE 			40					 // [mm] Detection distance of obstacles (doors)
+#define RUN_DISTANCE			100 				 // [mm] Set-back distance before breaking down an obstacle (demo 2)
+#define PAST_O_DISTANCE			RUN_DISTANCE+10		 // [mm] Distance where we know he have passed the obstacle
+#define STEPS_INTER				350					 // [steps] Experimentally dertermined value
+#define STEPS_HOUSE				1.5*STEPS_INTER	 	 // [steps] Experimentally dertermined value
+#define STEPS_ATTAQUE			11*CONV_CM2STEP	     // [steps] Experimentally dertermined value
+#define STEPS_U_TURN			660					 // [steps] Experimentally dertermined value for U turn
+#define STEPS_Q_TURN			315					 // [steps] Experimentally dertermined value for Quarter turn (Intersection)
+#define STEPS_BACK				980					 // [steps] Experimentally dertermined value the back direction in Intersection
 
 //counters
 #define CT_INTERSECTION			10				// help to be more precise in the color detection
-#define CT_BLANC				11
+#define CT_BLANC				11				// limits the error
 
 //Colors, RGB values
 #define RED_R					200				// rgb(200,0,0)
@@ -68,7 +71,6 @@ enum {DEMO1, DEMO2, DEMO3, NB_DEMOS};
 #define BLUE_R					30				// rgb(30,144,255)
 #define BLUE_G					144
 #define BLUE_B					255
-
 
 /*
 *	Starts the Robot Management Thread

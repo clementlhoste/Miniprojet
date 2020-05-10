@@ -25,7 +25,7 @@ uint16_t get_line_position(void);
 Exports the width (px) of the last line
 detected in the last picture
  */
-uint16_t get_line_width(void);
+//uint16_t get_line_width(void);
 
 /*
 Starts the Process Image Thread

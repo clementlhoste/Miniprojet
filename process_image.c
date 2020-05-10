@@ -4,34 +4,35 @@
 #include <usbcfg.h>
 #include <math.h>
 
-#include <main.h>
+#include <main.h> //DELETE?
 #include <camera/po8030.h>
 #include <process_image.h>
 
 //initialization of the line position at the middle of the camera range
 static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	
-static uint16_t line_width = 0;
-static float std_dev = 0;
+static float    std_dev = 0;
 
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
 /*
  *  Returns the line's width extracted from the image buffer given
  *  Returns 0 if line not found
+ *  Adapted from TP5, update line_position/std_dev
+ *  line_width is not directly used
  *
  *  param:
- *  /*
+ *
  *	uint8_t *buffer			Buffer containing intensity values of an image
  *
  */
-uint16_t extract_line_width(uint8_t *buffer)
+void extract_line_width(uint8_t *buffer)
 {
 
 	uint16_t i = 0, begin = 0, end = 0, width = 0;
 	uint8_t stop = 0, wrong_line = 0, line_not_found = 0;
 	uint32_t mean = 0;
 
-	static uint16_t last_width = PXTOCM/GOAL_DISTANCE;
+	static uint16_t last_width = 0;
 
 	//performs an average
 	for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
@@ -104,13 +105,6 @@ uint16_t extract_line_width(uint8_t *buffer)
 		last_width = width = (end - begin);
 		line_position = (begin + end)/2; //gives the line position.
 	}
-
-	//sets a maximum width or returns the measured width
-	if((PXTOCM/width) > MAX_DISTANCE){
-		return PXTOCM/MAX_DISTANCE;
-	}else{
-		return width;
-	}
 }
 
 
@@ -180,18 +174,18 @@ static THD_FUNCTION(ProcessImage, arg) {
 		}
 
 		//search for a line in the image and gets its width in pixels
-		line_width = extract_line_width(image);
+		extract_line_width(image);
     }
 }
 
 
 //////////////////// PUBLIC FONCTIONS //////////////////// 
-
+/*
 uint16_t get_line_width(void)
 {
 	return line_width;
 }
-
+*/
 float get_std_dev(void)
 {
 	return std_dev;

@@ -13,6 +13,7 @@ CSRC += ./main.c \
 		./robot_management.c \
 		./process_image.c \
 		./audio_processing.c\
+		./led_gestion.c\
 
 #Header folders to include
 INCDIR += 

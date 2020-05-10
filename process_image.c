@@ -1,12 +1,16 @@
 #include "ch.h"
 #include "hal.h"
-#include <chprintf.h>
-#include <usbcfg.h>
-#include <math.h>
+#include <chprintf.h> //DELETE
+#include <usbcfg.h> //DELETE
+#include <math.h> //DELETE
 
-#include <main.h> //DELETE?
+#include <main.h>
 #include <camera/po8030.h>
 #include <process_image.h>
+
+//Constants for the image processing
+#define WIDTH_SLOPE				5
+#define MIN_LINE_WIDTH			40
 
 //initialization of the line position at the middle of the camera range
 static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	
@@ -180,12 +184,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 
 //////////////////// PUBLIC FONCTIONS //////////////////// 
-/*
-uint16_t get_line_width(void)
-{
-	return line_width;
-}
-*/
+
 float get_std_dev(void)
 {
 	return std_dev;

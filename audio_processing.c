@@ -1,14 +1,42 @@
 #include "ch.h"
 #include "hal.h"
-#include <main.h>
-#include <usbcfg.h>
-#include <chprintf.h>
+#include <usbcfg.h> //DELETE?
+#include <chprintf.h> //DELETE?
 
 #include <audio/microphone.h>
 #include <audio_processing.h>
-
 #include <arm_math.h>
 #include <arm_const_structs.h>
+
+
+///////////// CONSTANT DEFINES /////////////
+
+//List of used frequencies for voice recognition
+#define FREQ1_L			27	// 422 Hz
+#define FREQ1_H			28	// 437 Hz
+#define FREQ2			65 	//1016 Hz
+#define FREQ3_L			97	//1515 Hz
+#define FREQ3_H			98	//1531 Hz
+#define FREQ4_L			137	//2140 Hz
+#define FREQ4_H			138	//2156 Hz
+#define FREQ5_L			201	//3140 Hz
+#define FREQ5_H			202	//3156 Hz
+
+//PNN parameters
+#define NB_CLASSES		4
+#define	NB_EXEMPLES		11
+#define NB_FREQ			5
+#define SMOOTHING		0.3f
+#define N1				1 //Nb of examples of class 1
+#define N2				4 //Nb of examples of class 2
+#define N3				3 //Nb of examples of class 3
+#define N4				3 //Nb of examples of class 4
+
+//Needed to normalize input data
+#define DATA_NORM		70000
+
+
+///////////// STATIC VARIABLES  /////////////
 
 //2 times FFT_SIZE because these arrays contain complex numbers (real + imaginary)
 static float micLeft_cmplx_input[2 * FFT_SIZE];
@@ -17,7 +45,7 @@ static float micLeft_cmplx_input[2 * FFT_SIZE];
 static float micLeft_output[FFT_SIZE];
 
 //Examples of each class, used to feed the PNN, and to help to classify each input (FFT vector)
-static const float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497},  	//VOID
+static const float examples[NB_EXEMPLES][NB_FREQ] = {  {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497},  	//VOID
 													  {0.025389122,0.022923238,0.008571391,0.013912240,0.011094523},	//SPEAK
 													  {0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},  	//SPEAK
 													  {0.238694565,0.048119511,0.021042294,0.026486421,0.013906452},	//SPEAK
@@ -33,10 +61,11 @@ static const float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0
 static _Bool process_active = FALSE;
 static int8_t vocal_command  = 0;
 
+///////////// INTERN FUNCTIONS /////////////
 
 /*
-*	Probablistic Neural Network
-*	This fonction was adapted from https://easyneuralnetwork.blogspot.com/2015/01/probabilistic-neural-network.html
+*	Probabilistic Neural Network
+*	This function was adapted from https://easyneuralnetwork.blogspot.com/2015/01/probabilistic-neural-network.html
 *
 *	params :
 *	C is the number of classes, N is the number of examples, Nk are from class k
@@ -88,7 +117,7 @@ uint8_t pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d],
 		}
 		sum[k] /= Nk;
 	}
-	//OUTPUT layer wich choose the largest "probability"
+	//OUTPUT layer which choose the largest "probability"
 	for (uint8_t k=1; k<=C; k++)
 	{
 		if (sum[k] > largest)
@@ -102,8 +131,8 @@ uint8_t pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d],
 
 
 /*
-*	Allows to export FFT values, using the catpure tool of Real Term, into a .txt
-*	can be used directly in Excel to easily analyse data
+*	Allows to export FFT values, using the capture tool of Real Term, into a .txt
+*	can be used directly in Excel to easily analyze data
 *	
 *	params :
 *	int16_t *data			Buffer containing FFT results
@@ -158,14 +187,14 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 	
 			nb_samples++;
 	
-			//stop when buffer is full
+			//stops when buffer is full
 			if(nb_samples >= (2 * FFT_SIZE)){
 			break;
 			}	
 		}
 
 		if(nb_samples >= (2 * FFT_SIZE)){
-			/*	FFT proccessing
+			/*	FFT processing
 			*
 			*	This FFT function stores the results in the input buffer given.
 			*	Very optimized fft function provided by ARM
@@ -188,14 +217,14 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			//this is the data we will give as input in the PNN, after normalization
 			float test_example[NB_FREQ];
 
-			//fill the vector
-			test_example[0] = (micLeft_output[FREQ1_L] + micLeft_output[FREQ1_H])/(2*DATA_NORM);	//range of values arround our frequency of interest
-			test_example[1] = micLeft_output[FREQ2]/DATA_NORM;										//exact frequeny, no mean needed
+			//fills the test vector
+			test_example[0] = (micLeft_output[FREQ1_L] + micLeft_output[FREQ1_H])/(2*DATA_NORM);	//range of values around our frequency of interest
+			test_example[1] = micLeft_output[FREQ2]/DATA_NORM;									//exact frequency, no mean needed
 			test_example[2] = (micLeft_output[FREQ3_L] + micLeft_output[FREQ3_H])/(2*DATA_NORM);
 			test_example[3] = (micLeft_output[FREQ4_L] + micLeft_output[FREQ4_H])/(2*DATA_NORM);
 			test_example[4] = (micLeft_output[FREQ5_L] + micLeft_output[FREQ5_H])/(2*DATA_NORM);
 		
-			//we give parameters to PNN, plus an array with input FFT verctor (test_example) to be classified
+			//we give parameters to PNN, plus an array with input FFT vector (test_example) to be classified
 			//the example matrix contains examples of each class
 			uint8_t class = 0;
 			class = pnn(NB_CLASSES, NB_EXEMPLES, NB_FREQ, SMOOTHING, test_example, examples);

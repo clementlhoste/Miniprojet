@@ -8,7 +8,6 @@
 #include "../lib/e-puck2_main-processor/src/sensors/VL53L0X/VL53L0X.h"
 #include <motors.h>
 
-
 /* Robot wide IPC bus. */
 extern messagebus_t bus;
 

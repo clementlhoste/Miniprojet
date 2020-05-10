@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #include "ch.h"
 #include "hal.h"
@@ -9,7 +8,7 @@
 #include <usbcfg.h> //DELETE?
 #include <main.h>
 #include <camera/po8030.h>
-#include <chprintf.h>
+#include <chprintf.h> //DELETE?
 #include <spi_comm.h>
 #include <audio/microphone.h>
 #include <arm_math.h>
@@ -18,10 +17,15 @@
 #include <audio_processing.h>
 #include <robot_management.h>
 
+
+///////////// DECLARATIONS  /////////////
+
 // Necessary declarations to use the proximity sensors
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
+
+///////////// INTERN FUCNTIONS /////////////
 
 /*  Function called in main function to initialize the serial communication (DELETE?)
  * 	no parameter, no return

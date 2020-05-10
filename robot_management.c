@@ -1,16 +1,70 @@
 #include "ch.h"
 #include "hal.h"
 #include <math.h>
-#include <usbcfg.h>
-#include <chprintf.h>
-#include <main.h>	//DELETE?
-#include <motors.h>
+#include <usbcfg.h> //DELETE?
+#include <chprintf.h> //DELETE?
+#include <main.h>
+#include <led_gestion.h>
 #include <process_image.h>
 #include <audio_processing.h>
 #include <robot_management.h>
-#include "../lib/e-puck2_main-processor/src/leds.h"
 #include "../lib/e-puck2_main-processor/src/selector.h"
 
+
+///////////// CONSTANT DEFINES /////////////
+
+#define ROTATION_THRESHOLD		10				// Do not rotate if the error is small
+#define ROTATION_COEFF			2				// Coefficient used to split PID action
+
+//Constants for speed
+#define SPEED_DE_CROISIERE		400				// [step/s] Speed when in mode normal
+#define VITESSE_CHARGE			1000				// [step/s] Speed of the robot when it goes forward to break down an obstacle
+#define VITESSE_APPROCHE_INT		200				// [step/s] Speed when approaching an intersection
+#define VITESSE_ROT_CHEMIN    	250				// [step/s] Absolute value of speed for the 2 motors when
+												// [step/s] rotating to choose a new path at an intersection
+//Constants for the PID regulator
+#define ERROR_THRESHOLD			5 				// [px]  because the camera is noisy (we don't want to take noise in consideration
+												// during our robot alignment
+#define KPL						0.5f  			// Parameters for line alignment PID : values determined according
+#define KIL 				  	 	0.0018f	 		// to automatic lessons and experimental trials
+#define KDL 				   		4.0f				//
+#define TERM_I_MAX				200				// Maximum integral contribution to PID
+#define MAX_SUM_ERROR_L			TERM_I_MAX/KIL  //limits sum error
+
+//Camera and Proxi values
+#define MAX_STD_INTER			10.7f			// Experimentally determined value
+#define MAX_STD_WHITE			15.0f			// Experimentally determined value
+#define MIN_STD_LINE				18.0f 			// Experimentally determined value
+#define W_CALCUL_INT				20				// Wait counter
+#define MIN_AMBIENT_L			3400				// Experimentally determined value
+#define MAX_AMBIENT_L			3350				// Experimentally determined value
+#define PROXI_R					2				// IR2 (right)
+#define PROXI_L					5				// IR5 (left)
+#define PROXI_FR45				1				// IR1 (front-right-45deg)
+#define PROXI_FL45				6				// IR6 (front-left-45deg)
+#define PROXI_FR					0				// IR0 (front-right)
+#define PROXI_FL					7				// IR7 (front-left)
+#define NB_PROXIS				6
+
+//Distance and Rotation constants
+#define PERIMETER_EPUCK			13                    // [cm]
+#define CONV_CM2STEP				1000/PERIMETER_EPUCK  // [step/cm]
+#define GOAL_DISTANCE 			40					 // [mm] Detection distance of obstacles (doors)
+#define RUN_DISTANCE				100 					 // [mm] Set-back distance before breaking down an obstacle (demo 2)
+#define PAST_O_DISTANCE			RUN_DISTANCE+10		 // [mm] Distance where we know he have passed the obstacle
+#define STEPS_INTER				350					 // [steps] Experimentally determined value
+#define STEPS_HOUSE				1.5*STEPS_INTER	 	 // [steps] Experimentally determined value
+#define STEPS_ATTAQUE			11*CONV_CM2STEP	     // [steps] Experimentally determined value
+#define STEPS_U_TURN				660					 // [steps] Experimentally determined value for U turn
+#define STEPS_Q_TURN				315					 // [steps] Experimentally determined value for Quarter turn (Intersection)
+#define STEPS_BACK				980					 // [steps] Experimentally determined value the back direction in Intersection
+
+//counters
+#define CT_INTERSECTION			10				// help to be more precise in the color detection
+#define CT_BLANC					11				// limits the error
+#define CT_OBSTACLE				100				// waits in order to avoid the analysis of motor noise
+
+///////////// INTERN FUNCTIONS /////////////
 
 /*
 *	PID regulator implementation to manage line alignment
@@ -66,152 +120,6 @@ int16_t pid_regulator(uint16_t distance, uint16_t goal, _Bool reset){
     return speed;
 }
 
-/*
-*	LED change in the main finite state machine, 
-*   in order to better understand what does the robot
-*	
-*	params :
-*	int8_t   mode			state variable determining LED states	
-*   uint8_t  state    		1 = switch on led, 0 = switch off 	
-*   
-*/
-void gerer_led(int8_t mode, uint8_t state)
-{
-	switch(mode)
-	{
-	  	case NORMAL:
-        //switch the front LED
-        	set_led(LED1, state);
-        	break;		
-
-	    case DEMI_TOUR:
-	    //switch 2 back RGB LED (in RED here)
-			set_rgb_led(LED4,(state * RED_R),0,0); 
-			set_rgb_led(LED6,(state * RED_R),0,0);
-			break;
-
-	    case OBSTACLE:
-	    //switch back LED
-	     	set_led(LED5, state);
-	       	break;
-
-	    case ATTAQUE:
-	    //switch 4 RGB LED in orange
-	      	set_rgb_led(LED2,(state*ORANGE_R),(state*ORANGE_G),0);
-	        set_rgb_led(LED4,(state*ORANGE_R),(state*ORANGE_G),0);
-        	set_rgb_led(LED6,(state*ORANGE_R),(state*ORANGE_G),0);
-	        set_rgb_led(LED8,(state*ORANGE_R),(state*ORANGE_G),0);
-	       	break;
-
-        case INTERSECTION:
-	    //switch 4 RGB LED in blue
-	        set_rgb_led(LED2,(state*BLUE_R),(state*BLUE_G),(state*BLUE_B));
-	        set_rgb_led(LED4,(state*BLUE_R),(state*BLUE_G),(state*BLUE_B));
-        	set_rgb_led(LED6,(state*BLUE_R),(state*BLUE_G),(state*BLUE_B));
-	        set_rgb_led(LED8,(state*BLUE_R),(state*BLUE_G),(state*BLUE_B));
-	        break;
-
-	    case CHOIX_CHEMIN:
-	    //only possible to switch off this light, on is in gerer_led_inter
-	    	set_led(LED3, 0);
-	   		break;
-
-	    case END:
-	    //nothing
-	   		break;
-
-	    default:
-	 		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR gestion led");
-	}
-}
-
-/*
-*	LED change mangagement for the main finite state machine
-*   in order to better understand what does the robot
-*	
-*	params :
-*	int8_t   mode			state variable determining LED states		
-*   
-*/
-void mode_led(int8_t mode)
-{
-	static int8_t ancien_mode = NORMAL;
-
-	if(mode != ancien_mode)
-	{
-		//switch off last "mode" corresponding LEDs
-		gerer_led(ancien_mode, 0);
-		
-		if(mode != CHOIX_CHEMIN) //case corresponding to gerer_led_inter()
-		{	
-			//switch on new "mode" corresponding LEDs
-			gerer_led(mode, 1);
-		}
-		ancien_mode = mode;
-	}
-}
-
-/*
-*	LED change in the direction finite state machine, 
-*   in order to better understand where the robot goes
-*	
-*	params :
-*	int8_t   dir			state variable determining LED states	
-*   uint8_t  state    		1 = switch on led, 0 = switch off 	
-*   
-*/
-void gerer_led_inter(int8_t dir, uint8_t state)
-{
-	switch(dir)
-	{
-	  	case RIGHT:
-        //switch the front LED
-        	set_led(LED3, state);
-        	break;		
-
-	    case FRONT:
-	    //switch 2 front RGB LED (in RED here)
-			set_rgb_led(LED2,(state*RED_R),0,0);
-			set_rgb_led(LED8,(state*RED_R),0,0);
-			break;
-
-	    case LEFT:
-	    //switch left LED
-	     	set_led(LED7,state);
-	       	break;
-
-	    case BACK:
-	    //switch back LED
-	   		set_led(LED5,state);
-	       	break;
-
-	    default:
-	 		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR gest led inter");
-	}
-}
-
-/*
-*	LED change management in the direction finite state machine, 
-*   in order to better understand where the robot goes
-*	
-*	params :
-*	int8_t   dir			state variable determining LED states		
-*   
-*/
-void mode_inter_led(int8_t dir)
-{
-	static uint8_t ancienne_dir = RIGHT;
-
-	if(dir != ancienne_dir)
-	{
-		//switch off last "dir" corresponding LEDs
-		gerer_led_inter(ancienne_dir, 0);
-		//switch on new "dir" corresponding LEDs
-		gerer_led_inter(dir, 1);
-	}
-	ancienne_dir = dir;
-}
-
 
 /*
 *	Direction Finite State Machine
@@ -232,7 +140,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 
 	switch(recherche_chemin)
 	{
-		case RIGHT: //AT first, check if there is a path on the right
+		case RIGHT: //At first, check if there is a path on the right
 
 			*vitesse_rotation = VITESSE_ROT_CHEMIN;
 
@@ -326,11 +234,12 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 	return chemin_trouve;
 }
 
+///////////// THREAD /////////////
+
 /*
 *	Main Finite State Machine
-*   Decide the behavior of the robot
-*   depending on its environment
-*	
+*   Determines the robot behavior depending on its environment
+*
 *	params :
 *   -
 *   
@@ -349,7 +258,7 @@ static THD_FUNCTION(Rob_management, arg) {
 	float ambient_light = 0.0, std_dev = 0.0;
 	_Bool intersection = FALSE, blanc = FALSE;
 
-    //demo varaiable is a state variable used to determine which part of the demonstration we are proceeding
+    //demo variable is a state variable used to determine which part of the demonstration we are proceeding
     static int8_t demo = DEMO1;
 
     //mode variable is a state variable used to adapt the epuck2 behavior
@@ -360,12 +269,12 @@ static THD_FUNCTION(Rob_management, arg) {
     gerer_led(NORMAL,1); //LED initialization
  
     while(1){
+
         time = chVTGetSystemTime();
 
         //Mode change, using selector	
-    	demo = get_selector()%NB_DEMOS;
+    		demo = get_selector()%NB_DEMOS;
 
-    	//MAGIC NB
         ambient_light = (get_ambient_light(PROXI_R)+get_ambient_light(PROXI_L)+get_ambient_light(PROXI_FR45)
         				+get_ambient_light(PROXI_FL45) + get_ambient_light(PROXI_FR) + get_ambient_light(PROXI_FL))/NB_PROXIS;
 
@@ -561,7 +470,6 @@ static THD_FUNCTION(Rob_management, arg) {
 
 
 ///////////// PUBLIC FUNCTIONS /////////////
-
 
 /*
 *	Starts the Robot Management Thread

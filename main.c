@@ -5,10 +5,10 @@
 #include "ch.h"
 #include "hal.h"
 #include "memory_protection.h"
-#include <usbcfg.h> //DELETE?
+
 #include <main.h>
 #include <camera/po8030.h>
-#include <chprintf.h> //DELETE?
+
 #include <spi_comm.h>
 #include <audio/microphone.h>
 #include <arm_math.h>
@@ -27,31 +27,12 @@ CONDVAR_DECL(bus_condvar);
 
 ///////////// INTERN FUCNTIONS /////////////
 
-/*  Function called in main function to initialize the serial communication (DELETE?)
- * 	no parameter, no return
- */
-static void serial_start(void)
-{
-	static SerialConfig ser_cfg = {
-	    115200,
-	    0,
-	    0,
-	    0,
-	};
-
-	sdStart(&SD3, &ser_cfg); // UART3.
-}
-
 int main(void)
 {
     halInit();
     chSysInit();
     mpu_init();
 
-    //Starts the serial communication (to DELETE)
-    serial_start();
-    //Starts the USB communication (to DELETE)
-    usb_start();
     //Starts the camera
     dcmi_start();
 	po8030_start();
@@ -87,10 +68,10 @@ int main(void)
     /* Infinite loop. */
     while (1)
     {
-    		//We copy the buffer to avoid conflicts, double buffering
-    		arm_copy_f32(get_audio_buffer_ptr(LEFT_OUTPUT), send_tab, FFT_SIZE);
+    	//We copy the buffer to avoid conflicts, double buffering
+    	arm_copy_f32(get_audio_buffer_ptr(LEFT_OUTPUT), send_tab, FFT_SIZE);
 
-    		//Waits 1 second
+    	//Waits 1 second
  	   	chThdSleepMilliseconds(1000);
     }
 }

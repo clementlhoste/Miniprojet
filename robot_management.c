@@ -1,8 +1,7 @@
 #include "ch.h"
 #include "hal.h"
+
 #include <math.h>
-#include <usbcfg.h> //DELETE?
-#include <chprintf.h> //DELETE?
 #include <main.h>
 #include <led_gestion.h>
 #include <process_image.h>
@@ -18,50 +17,50 @@
 
 //Constants for speed
 #define SPEED_DE_CROISIERE		400				// [step/s] Speed when in mode normal
-#define VITESSE_CHARGE			1000				// [step/s] Speed of the robot when it goes forward to break down an obstacle
-#define VITESSE_APPROCHE_INT		200				// [step/s] Speed when approaching an intersection
+#define VITESSE_CHARGE			1000			// [step/s] Speed of the robot when it goes forward to break down an obstacle
+#define VITESSE_APPROCHE_INT	200				// [step/s] Speed when approaching an intersection
 #define VITESSE_ROT_CHEMIN    	250				// [step/s] Absolute value of speed for the 2 motors when
 												// [step/s] rotating to choose a new path at an intersection
 //Constants for the PID regulator
 #define ERROR_THRESHOLD			5 				// [px]  because the camera is noisy (we don't want to take noise in consideration
 												// during our robot alignment
 #define KPL						0.5f  			// Parameters for line alignment PID : values determined according
-#define KIL 				  	 	0.0018f	 		// to automatic lessons and experimental trials
-#define KDL 				   		4.0f				//
+#define KIL 				  	0.0018f	 		// to automatic lessons and experimental trials
+#define KDL 				  	4.0f			//
 #define TERM_I_MAX				200				// Maximum integral contribution to PID
 #define MAX_SUM_ERROR_L			TERM_I_MAX/KIL  //limits sum error
 
 //Camera and Proxi values
 #define MAX_STD_INTER			10.7f			// Experimentally determined value
 #define MAX_STD_WHITE			15.0f			// Experimentally determined value
-#define MIN_STD_LINE				18.0f 			// Experimentally determined value
-#define W_CALCUL_INT				20				// Wait counter
-#define MIN_AMBIENT_L			3400				// Experimentally determined value
-#define MAX_AMBIENT_L			3350				// Experimentally determined value
+#define MIN_STD_LINE			18.0f 			// Experimentally determined value
+#define W_CALCUL_INT			20				// Wait counter
+#define MIN_AMBIENT_L			3400			// Experimentally determined value
+#define MAX_AMBIENT_L			3350			// Experimentally determined value
 #define PROXI_R					2				// IR2 (right)
 #define PROXI_L					5				// IR5 (left)
 #define PROXI_FR45				1				// IR1 (front-right-45deg)
 #define PROXI_FL45				6				// IR6 (front-left-45deg)
-#define PROXI_FR					0				// IR0 (front-right)
-#define PROXI_FL					7				// IR7 (front-left)
+#define PROXI_FR				0				// IR0 (front-right)
+#define PROXI_FL				7				// IR7 (front-left)
 #define NB_PROXIS				6
 
 //Distance and Rotation constants
-#define PERIMETER_EPUCK			13                    // [cm]
-#define CONV_CM2STEP				1000/PERIMETER_EPUCK  // [step/cm]
+#define PERIMETER_EPUCK			13                   // [cm]
+#define CONV_CM2STEP			1000/PERIMETER_EPUCK // [step/cm]
 #define GOAL_DISTANCE 			40					 // [mm] Detection distance of obstacles (doors)
-#define RUN_DISTANCE				100 					 // [mm] Set-back distance before breaking down an obstacle (demo 2)
+#define RUN_DISTANCE			100 				 // [mm] Set-back distance before breaking down an obstacle (demo 2)
 #define PAST_O_DISTANCE			RUN_DISTANCE+10		 // [mm] Distance where we know he have passed the obstacle
 #define STEPS_INTER				350					 // [steps] Experimentally determined value
 #define STEPS_HOUSE				1.5*STEPS_INTER	 	 // [steps] Experimentally determined value
 #define STEPS_ATTAQUE			11*CONV_CM2STEP	     // [steps] Experimentally determined value
-#define STEPS_U_TURN				660					 // [steps] Experimentally determined value for U turn
-#define STEPS_Q_TURN				315					 // [steps] Experimentally determined value for Quarter turn (Intersection)
+#define STEPS_U_TURN			660					 // [steps] Experimentally determined value for U turn
+#define STEPS_Q_TURN			315					 // [steps] Experimentally determined value for Quarter turn (Intersection)
 #define STEPS_BACK				980					 // [steps] Experimentally determined value the back direction in Intersection
 
 //counters
-#define CT_INTERSECTION			10				// help to be more precise in the color detection
-#define CT_BLANC					11				// limits the error
+#define CT_INTERSECTION			10				// helps to be more precise in the color detection
+#define CT_BLANC				11				// limits the error
 #define CT_OBSTACLE				100				// waits in order to avoid the analysis of motor noise
 
 ///////////// INTERN FUNCTIONS /////////////
@@ -224,8 +223,8 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 			break;
 
 
-		default:
-			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR choix chemin"); //DELETE?
+		default: //should not happen
+			recherche_chemin = RIGHT; //re-initialized
 			chemin_trouve = FALSE;
 	}
 	//change LED depending on the direction
@@ -452,8 +451,8 @@ static THD_FUNCTION(Rob_management, arg) {
         		if(ambient_light < MIN_AMBIENT_L) mode = NORMAL; //if high ambient light (inverse scale)
    				break;
 
-        	default:
-        		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR"); //DELETE?
+        	default: //should not happen
+        		mode = NORMAL; //re-initialized
         }
 
         //change the states of the led, switch off previous mode LED and switch on new one 

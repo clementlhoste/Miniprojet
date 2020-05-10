@@ -1,7 +1,5 @@
 #include "ch.h"
 #include "hal.h"
-#include <usbcfg.h> //DELETE?
-#include <chprintf.h> //DELETE?
 
 #include <audio/microphone.h>
 #include <audio_processing.h>
@@ -12,25 +10,25 @@
 ///////////// CONSTANT DEFINES /////////////
 
 //List of used frequencies for voice recognition
-#define FREQ1_L			27	// 422 Hz
-#define FREQ1_H			28	// 437 Hz
-#define FREQ2			65 	//1016 Hz
-#define FREQ3_L			97	//1515 Hz
-#define FREQ3_H			98	//1531 Hz
-#define FREQ4_L			137	//2140 Hz
-#define FREQ4_H			138	//2156 Hz
-#define FREQ5_L			201	//3140 Hz
-#define FREQ5_H			202	//3156 Hz
+#define FREQ1_L			27	//  422 Hz
+#define FREQ1_H			28	//  437 Hz
+#define FREQ2			65 	// 1016 Hz the exact frequency needed
+#define FREQ3_L			97	// 1515 Hz
+#define FREQ3_H			98	// 1531 Hz
+#define FREQ4_L			137	// 2140 Hz
+#define FREQ4_H			138	// 2156 Hz
+#define FREQ5_L			201	// 3140 Hz
+#define FREQ5_H			202	// 3156 Hz
 
 //PNN parameters
 #define NB_CLASSES		4
 #define	NB_EXEMPLES		11
 #define NB_FREQ			5
-#define SMOOTHING		0.3f
-#define N1				1 //Nb of examples of class 1
-#define N2				4 //Nb of examples of class 2
-#define N3				3 //Nb of examples of class 3
-#define N4				3 //Nb of examples of class 4
+#define SMOOTHING		0.3f	// Experimentally determined value
+#define N1				1 		// Nb of examples of class 1
+#define N2				4 		// Nb of examples of class 2
+#define N3				3 		// Nb of examples of class 3
+#define N4				3 		// Nb of examples of class 4
 
 //Needed to normalize input data
 #define DATA_NORM		70000
@@ -45,9 +43,9 @@ static float micLeft_cmplx_input[2 * FFT_SIZE];
 static float micLeft_output[FFT_SIZE];
 
 //Examples of each class, used to feed the PNN, and to help to classify each input (FFT vector)
-static const float examples[NB_EXEMPLES][NB_FREQ] = {  {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497},  //VOID
+static const float examples[NB_EXEMPLES][NB_FREQ] = { {0.007694978,0.018722998,0.006465797,0.011846881,0.009480497}, 	//VOID
 													  {0.025389122,0.022923238,0.008571391,0.013912240,0.011094523},	//SPEAK
-													  {0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},  //SPEAK
+													  {0.518886463,0.057486514,0.031562502,0.020052178,0.012833095},  	//SPEAK
 													  {0.238694565,0.048119511,0.021042294,0.026486421,0.013906452},	//SPEAK
 													  {0.077949966,0.023574965,0.009795453,0.013051499,0.010085111},	//SPEAK
 													  {0.525953696,0.076893209,0.012715966,0.018951827,0.013572355},	//GO
@@ -133,10 +131,12 @@ uint8_t pnn(uint8_t C, uint8_t N, uint8_t d, float sigma, float test_example[d],
 /*
 *	Allows to export FFT values, using the capture tool of Real Term, into a .txt
 *	can be used directly in Excel to easily analyze data
+*	Used to add examples of each class for the PNN
+*	Need #include <chprintf.h> and USB serial config.
 *	
 *	params :
 *	int16_t *data			Buffer containing FFT results
-*/
+
 void extract_FFT(float* data)
 {
 	chprintf((BaseSequentialStream *) &SDU1, "%f;",data[FREQ1_L]);
@@ -149,7 +149,7 @@ void extract_FFT(float* data)
 	chprintf((BaseSequentialStream *) &SDU1, "%f; ",data[FREQ5_L]);
 	chprintf((BaseSequentialStream *) &SDU1, "%f \n",data[FREQ5_H]);
 }
-
+*/
 
 
 ///////////////// PUBLIC FUNCTIONS /////////////////
@@ -218,7 +218,7 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			float test_example[NB_FREQ];
 
 			//fills the test vector
-			test_example[0] = (micLeft_output[FREQ1_L] + micLeft_output[FREQ1_H])/(2*DATA_NORM);	//range of values around our frequency of interest
+			test_example[0] = (micLeft_output[FREQ1_L] + micLeft_output[FREQ1_H])/(2*DATA_NORM);//range of values around our frequency of interest
 			test_example[1] = micLeft_output[FREQ2]/DATA_NORM;									//exact frequency, no mean needed
 			test_example[2] = (micLeft_output[FREQ3_L] + micLeft_output[FREQ3_H])/(2*DATA_NORM);
 			test_example[3] = (micLeft_output[FREQ4_L] + micLeft_output[FREQ4_H])/(2*DATA_NORM);

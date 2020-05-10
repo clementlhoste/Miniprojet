@@ -225,7 +225,7 @@ _Bool choix_chemin(int16_t* vitesse_rotation)
 
 
 		default:
-			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR choix chemin");
+			chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR choix chemin"); //DELETE?
 			chemin_trouve = FALSE;
 	}
 	//change LED depending on the direction
@@ -253,8 +253,8 @@ static THD_FUNCTION(Rob_management, arg) {
     systime_t time;
 
     int16_t speed = 0, speed_correction = 0;
-    uint16_t distance_mm;       //distance of the detected obstacle from the robot thanks to the TOF
-	int8_t  vocal_command = 0;  // 0/GO/C_BACK
+    uint16_t distance_mm;       // distance of the detected obstacle from the robot thanks to the TOF
+	int8_t  vocal_command = 0;  // possible values : 0/GO/C_BACK
 	float ambient_light = 0.0, std_dev = 0.0;
 	_Bool intersection = FALSE, blanc = FALSE;
 
@@ -289,7 +289,7 @@ static THD_FUNCTION(Rob_management, arg) {
        			blanc = ((std_dev > MAX_STD_INTER)&&(std_dev < MAX_STD_WHITE)); //end of the line
 
         		//if the distance is well initialized (not 0)
-        		if(distance_mm && (distance_mm < GOAL_DISTANCE)) //DEMO 2 and obsctale detected
+        		if(distance_mm && (distance_mm < GOAL_DISTANCE)) //DEMO 2 and obstacle detected
         		{
         			compteur_bl = 0;
         			compteur_int = 0;
@@ -312,7 +312,7 @@ static THD_FUNCTION(Rob_management, arg) {
         			right_motor_set_pos(0);
         			mode = END;
         		}
-        		else if(intersection) //crossroad detected
+        		else if(intersection) //cross-road detected
         		{
         			speed = 0;
         			speed_correction = 0;
@@ -341,7 +341,7 @@ static THD_FUNCTION(Rob_management, arg) {
         			}
 
         		}
-        		else //stay in NORMAL and apply pid regulation
+        		else //stay in NORMAL and apply PID regulation
         		{
         			speed = SPEED_DE_CROISIERE;
 					speed_correction = pid_regulator(get_line_position(), IMAGE_BUFFER_SIZE/2, 0);
@@ -363,7 +363,7 @@ static THD_FUNCTION(Rob_management, arg) {
 				{
 					speed_correction = 0;
 
-					if(compteur_dt++ >= W_CALCUL_INT) // wait to get new caclulations (little break)
+					if(compteur_dt++ >= W_CALCUL_INT) // wait to get new calculations (little break)
 					{
 						compteur_dt = 0;
 						mode = NORMAL;
@@ -417,7 +417,7 @@ static THD_FUNCTION(Rob_management, arg) {
         		}
         		break;
 
-        	case INTERSECTION: //detects a black square which represents future crossroads
+        	case INTERSECTION: //detects a black square which represents future cross-roads
 
         		speed = VITESSE_APPROCHE_INT;
         		speed_correction = 0;
@@ -453,7 +453,7 @@ static THD_FUNCTION(Rob_management, arg) {
    				break;
 
         	default:
-        		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR");
+        		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR"); //DELETE?
         }
 
         //change the states of the led, switch off previous mode LED and switch on new one 

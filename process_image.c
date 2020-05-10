@@ -8,15 +8,20 @@
 #include <camera/po8030.h>
 #include <process_image.h>
 
+///////////// CONSTANT DEFINES /////////////
 //Constants for the image processing
 #define WIDTH_SLOPE				5
 #define MIN_LINE_WIDTH			40
+
+///////////// STATIC VARIABLES & DECLARATIONS /////////////
 
 //initialization of the line position at the middle of the camera range
 static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	
 static float    std_dev = 0;
 
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
+
+///////////// INTERN FUNCTION /////////////
 
 /*
  *  Returns the line's width extracted from the image buffer given
@@ -111,7 +116,7 @@ void extract_line_width(uint8_t *buffer)
 	}
 }
 
-
+///////////// THREADS /////////////
 /*
 *	Thread to capture an image using the camera
 *	

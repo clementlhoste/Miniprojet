@@ -9,9 +9,9 @@ enum {NORMAL, OBSTACLE, ATTAQUE, INTERSECTION, CHOIX_CHEMIN, DEMI_TOUR, END};
 enum {RIGHT, FRONT, LEFT, BACK};
 
 // Enum to define the different demo modes
-//DEMO1 : line alignment, robot moving through the maze, displacement algorithm, management of obstacles as walls
-//DEMO2 : same but now the robot can go through obstacles like a battering ram
-//DEMO3 : the synthesis of DEMO1/2, robot is using voice recognition to deal with obstacles using go/back command
+// DEMO1 : line alignment, robot moving through the maze, displacement algorithm, management of obstacles as walls
+// DEMO2 : same but now the robot can go through obstacles like a battering ram
+// DEMO3 : the synthesis of DEMO1/2, robot is using voice recognition to deal with obstacles using go/back command
 enum {DEMO1, DEMO2, DEMO3, NB_DEMOS};
 
 /*

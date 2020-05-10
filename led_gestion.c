@@ -72,7 +72,7 @@ void gerer_led(int8_t mode, uint8_t state)
 	   		break;
 
 	    default:
-	 		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR gestion led");
+	 		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR gestion led"); //DELETE?
 	}
 }
 

@@ -1,15 +1,13 @@
 #include "ch.h"
 #include "hal.h"
-#include <chprintf.h> //DELETE
-#include <usbcfg.h> //DELETE
-#include <math.h> //DELETE
 
 #include <main.h>
 #include <camera/po8030.h>
 #include <process_image.h>
 
 ///////////// CONSTANT DEFINES /////////////
-//Constants for the image processing
+
+//Constants for the line analysis
 #define WIDTH_SLOPE				5
 #define MIN_LINE_WIDTH			40
 
@@ -147,7 +145,7 @@ static THD_FUNCTION(CaptureImage, arg) {
 }
 
 /*
-*	Thd use to analyse the last picture taken by the camera,
+*	Thread use to analyse the last picture taken by the camera,
 *   update the line_position/std_dev using extract_line()
 *	
 *	param :

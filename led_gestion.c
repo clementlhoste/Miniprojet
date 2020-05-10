@@ -1,7 +1,6 @@
 #include "ch.h"
 #include "hal.h"
-#include <usbcfg.h> //DELETE?
-#include <chprintf.h> //DELETE?
+
 #include <led_gestion.h>
 #include <robot_management.h>
 
@@ -9,8 +8,8 @@
 
 //Colors, RGB values
 #define RED_R					200				// rgb(200,0,0)
-#define ORANGE_R					255				// rgb(255,165,0)
-#define ORANGE_G					165
+#define ORANGE_R				255				// rgb(255,165,0)
+#define ORANGE_G				165
 #define BLUE_R					30				// rgb(30,144,255)
 #define BLUE_G					144
 #define BLUE_B					255
@@ -67,12 +66,9 @@ void gerer_led(int8_t mode, uint8_t state)
 	     	set_led(LED3, 0);
 	   		break;
 
-	    case END:
-	    //nothing
-	   		break;
-
-	    default:
-	 		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR gestion led"); //DELETE?
+	    default: //END or any unknown case
+	 		//do nothing
+	    	break;
 	}
 }
 
@@ -108,7 +104,7 @@ void mode_led(int8_t mode)
 *
 *	params :
 *	int8_t   dir			    state variable determining LED states
-*   uint8_t  state    		1 = switch on led, 0 = switch off
+*   uint8_t  state    			1 = switch on led, 0 = switch off
 *
 */
 void gerer_led_inter(int8_t dir, uint8_t state)
@@ -136,8 +132,9 @@ void gerer_led_inter(int8_t dir, uint8_t state)
 	   		set_led(LED5,state);
 	       	break;
 
-	    default:
-	 		chprintf((BaseSequentialStream *)&SDU1, "MODE ERROR gest led inter"); //DELETE?
+	    default: //any unknown case
+	 		//do nothing
+	    	break;
 	}
 }
 

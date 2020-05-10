@@ -189,8 +189,8 @@ void processAudioData(int16_t *data, uint16_t num_samples){
 			float test_example[NB_FREQ];
 
 			//fill the vector
-			test_example[0] = (micLeft_output[FREQ1_L] + micLeft_output[FREQ1_H])/(2*DATA_NORM);
-			test_example[1] = micLeft_output[FREQ2]/DATA_NORM;
+			test_example[0] = (micLeft_output[FREQ1_L] + micLeft_output[FREQ1_H])/(2*DATA_NORM);	//range of values arround our frequency of interest
+			test_example[1] = micLeft_output[FREQ2]/DATA_NORM;										//exact frequeny, no mean needed
 			test_example[2] = (micLeft_output[FREQ3_L] + micLeft_output[FREQ3_H])/(2*DATA_NORM);
 			test_example[3] = (micLeft_output[FREQ4_L] + micLeft_output[FREQ4_H])/(2*DATA_NORM);
 			test_example[4] = (micLeft_output[FREQ5_L] + micLeft_output[FREQ5_H])/(2*DATA_NORM);

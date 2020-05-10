@@ -63,6 +63,7 @@ enum {DEMO1, DEMO2, DEMO3, NB_DEMOS};
 //counters
 #define CT_INTERSECTION			10				// help to be more precise in the color detection
 #define CT_BLANC				11				// limits the error
+#define CT_OBSTACLE				100				// waits in order to avoid the analysis of motor noise 
 
 //Colors, RGB values
 #define RED_R					200				// rgb(200,0,0)

@@ -225,6 +225,7 @@ void mode_inter_led(int8_t dir)
 _Bool choix_chemin(int16_t* vitesse_rotation)
 {
 
+	//state variable indicating the direction of the robot (RIGHT/FRONT/LEFT/BACK)
 	static int8_t recherche_chemin = RIGHT;
 	_Bool chemin_trouve = FALSE;
 	static uint8_t compteur = 0;
@@ -478,7 +479,7 @@ static THD_FUNCTION(Rob_management, arg) {
         			else //mode DEMO3
         			{
         				active_audio_processing(); //voice recognition enabled
-        				if(compteur_obst++ > 100)   //avoid motor noise
+        				if(compteur_obst++ > CT_OBSTACLE)   //avoid motor noise
         				{
         					set_led(LED1,1);
         					vocal_command = return_vocal_command();
@@ -562,6 +563,9 @@ static THD_FUNCTION(Rob_management, arg) {
 ///////////// PUBLIC FUNCTIONS /////////////
 
 
+/*
+*	Starts the Robot Management Thread
+*/
 void rob_management_start(void){
 	chThdCreateStatic(waRob_management, sizeof(waRob_management), NORMALPRIO+10, Rob_management, NULL);
 }
